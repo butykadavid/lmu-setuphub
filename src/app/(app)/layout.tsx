@@ -7,9 +7,7 @@ export default function AppLayout({
     children: React.ReactNode;
 }) {
     return <>
-        <AuthProvider>
-            <NavBar />
-            <main className="flex-1">{children}</main>
-        </AuthProvider>
+        <NavBar />
+        <main className="flex-1">{children}</main>
     </>;
 }

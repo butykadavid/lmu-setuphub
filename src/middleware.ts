@@ -1,24 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 
-/**
- * Middleware to protect routes
- * Add this to middleware.ts to protect specific pages
- */
+import { appRoutes } from "@/lib/constants";
+
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // List of protected routes
-  const protectedRoutes = ["/dashboard", "/profile", "/settings"];
+  const isAuthenticated = request.cookies.has("__session");
 
-  // Check if the current route is protected
-  const isProtected = protectedRoutes.some((route) =>
-    pathname.startsWith(route)
-  );
+  if (isAuthenticated && appRoutes.publicRoutes.includes(pathname)) {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
 
-  if (isProtected) {
-    // You could add logic here to check if user is authenticated
-    // For now, this is just a template
-    console.log(`Protected route accessed: ${pathname}`);
+  if (!isAuthenticated && appRoutes.protectedRoutes.some((route) => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL("/", request.url));
   }
 
   return NextResponse.next();

@@ -2,7 +2,8 @@
 
 import { useAuthGate } from "@/context/landing/AuthGateProvider";
 
-import { Activity } from "lucide-react";
+import { Activity, SlidersVertical, FileUp } from "lucide-react";
+
 
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Button } from "@/components/ui/button";
@@ -52,10 +53,13 @@ export default function HeroSection() {
                             className="rounded-xl px-7 py-6 font-semibold"
                             onClick={() => requireAuthNavigation("/setups")}
                         >
+                            <SlidersVertical className="mr-2 h-5 w-5" />
                             Explore setups
                         </Button>
 
-                        <Button className="rounded-xl px-7 py-6 font-semibold">
+                        <Button className="rounded-xl px-7 py-6 font-semibold"
+                            onClick={() => requireAuthNavigation("/upload")}>
+                            <FileUp className="mr-2 h-5 w-5" />
                             Upload telemetry
                         </Button>
                     </div>

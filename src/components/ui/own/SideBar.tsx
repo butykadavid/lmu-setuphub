@@ -35,7 +35,7 @@ export default function SideBar({
           open ? "translate-x-0" : "translate-x-full"
         )}
       >
-        <div className="absolute right-4 top-4">
+        <div className="absolute left-4 top-4">
           <Button variant="ghost" size="icon" onClick={onClose}>
             <X className="h-4 w-4" />
           </Button>

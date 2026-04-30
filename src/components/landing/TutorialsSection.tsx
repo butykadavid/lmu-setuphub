@@ -1,5 +1,6 @@
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import { Button } from "../ui/button";
+import { BookOpenCheck } from "lucide-react";
 
 const tutorials = [
     {
@@ -41,6 +42,7 @@ export default function TutorialsSection() {
                     </p>
 
                     <Button className="mt-8 rounded-xl bg-primary px-7 py-6 font-semibold text-primary-foreground hover:bg-primary/90">
+                        <BookOpenCheck className="mr-2 h-5 w-5" />
                         Browse tutorials
                     </Button>
                 </div>

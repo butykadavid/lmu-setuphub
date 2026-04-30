@@ -1,4 +1,3 @@
-import { AuthGateProvider } from "@/context/landing/AuthGateProvider";
 
 export default function MarketingLayout({
   children,
@@ -6,8 +5,6 @@ export default function MarketingLayout({
   children: React.ReactNode;
 }) {
   return (
-    <AuthGateProvider>
-      {children}
-    </AuthGateProvider>
+    <>{children}</>
   );
 }

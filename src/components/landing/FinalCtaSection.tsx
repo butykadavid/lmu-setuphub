@@ -1,8 +1,12 @@
 'use client';
 
+import { FileUp } from "lucide-react";
 import { Button } from "../ui/button";
+import { useAuthGate } from "@/context/landing/AuthGateProvider";
 
 export default function FinalCtaSection() {
+  const { requireAuthNavigation } = useAuthGate();
+
   return (
     <section className="border-t border-border bg-background px-8 py-24 md:px-16">
       <div className="mx-auto flex max-w-7xl flex-col gap-8 rounded-[2rem] border border-primary/20 bg-primary/10 p-10 md:flex-row md:items-center md:justify-between">
@@ -17,7 +21,11 @@ export default function FinalCtaSection() {
           </p>
         </div>
 
-        <Button className="w-fit rounded-xl bg-primary px-7 py-6 font-bold text-primary-foreground hover:bg-primary/90">
+        <Button
+          className="w-fit rounded-xl bg-primary px-7 py-6 font-bold text-primary-foreground hover:bg-primary/90"
+          onClick={() => requireAuthNavigation("/upload")}
+        >
+          <FileUp className="mr-2 h-5 w-5" />
           Upload telemetry
         </Button>
       </div>

@@ -1,9 +1,5 @@
 'use client';
 
-import { useEffect, useState } from "react";
-
-import { useRouter } from "next/navigation";
-
 import { useAuth } from "@/context/AuthContext";
 
 import HeroSection from "@/components/landing/HeroSection";
@@ -17,13 +13,6 @@ import styles from "@/styles/marketing/landingPage.module.css";
 
 export default function LandingPage() {
     const { user, loading } = useAuth();
-    const router = useRouter();
-
-    useEffect(() => {
-        if (!loading && user) {
-            router.replace("/dashboard");
-        }
-    }, [user, loading, router]);
 
     if (loading || user) return null;
 

@@ -1,10 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
+
 import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
+
+import { signInWithGoogle } from "@/lib/firebase/auth";
+import { appRoutes } from "@/lib/constants";
 
 import { Button } from "@/components/ui/button";
-import { signInWithGoogle } from "@/lib/firebase/auth";
 
 export function GoogleSignInButton({
   text = "Sign in with Google",
@@ -18,11 +22,34 @@ export function GoogleSignInButton({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const router = useRouter();
+  const pathname = usePathname();
+
   const handleSignIn = async () => {
     setLoading(true);
     setError(null);
     try {
-      await signInWithGoogle();
+      const user = await signInWithGoogle();
+
+      if (user) {
+        const idToken = await user.getIdToken();
+
+        const response = await fetch("/api/auth/session", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ idToken }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Failed to create session");
+        }
+      }
+
+      if (appRoutes.publicRoutes.includes(pathname)) {
+        router.push("/dashboard");
+      }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An error occurred during sign-in";
@@ -41,7 +68,6 @@ export function GoogleSignInButton({
         variant="outline"
         className={`relative overflow-hidden ${transition ? "group" : ""} ${className}`}
       >
-        {/* LOADING STATE */}
         {loading ? (
           <span className="flex items-center justify-center">
             Signing in...

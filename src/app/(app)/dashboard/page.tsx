@@ -6,9 +6,9 @@ import { Activity, Clock, Download, Gauge, Plus, Star, Upload } from "lucide-rea
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Dashboard() {
     const { user, loading } = useAuth();
@@ -17,6 +17,14 @@ export default function Dashboard() {
         return (
             <div className="flex min-h-screen items-center justify-center text-muted-foreground">
                 Loading...
+            </div>
+        );
+    }
+
+    if (!user) {
+        return (
+            <div className="flex min-h-screen items-center justify-center text-muted-foreground">
+                You need to be signed in to view your dashboard.
             </div>
         );
     }
@@ -51,8 +59,11 @@ export default function Dashboard() {
                         </CardHeader>
 
                         <CardContent className="flex flex-col gap-6 p-6 md:flex-row md:items-center">
-                            <div className="flex h-20 w-20 items-center justify-center rounded-2xl bg-primary/10 text-2xl font-black text-primary">
-                                {user?.displayName?.[0] ?? user?.email?.[0] ?? "D"}
+                            <div className="flex h-20 w-20 items-center justify-center rounded-2xl text-2xl font-black text-primary">
+                                <Avatar className="h-full w-full">
+                                    <AvatarImage src={`${user.photoURL}`} alt={`${user.displayName || user.email}`} />
+                                    <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+                                </Avatar>
                             </div>
 
                             <div className="flex-1">
