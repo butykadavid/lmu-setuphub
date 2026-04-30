@@ -8,6 +8,12 @@ import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/context/AuthContext";
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
+import {
+  Avatar,
+  AvatarBadge,
+  AvatarFallback,
+  AvatarImage,
+} from "@/components/ui/avatar"
 
 import { signOut } from "@/lib/firebase/auth";
 
@@ -33,7 +39,6 @@ export function NavBar() {
         <div className="flex justify-between items-center h-16">
 
           <Link href="/" className="flex items-center gap-2 font-bold text-lg">
-            <span className="text-primary">🚀</span>
             LMU SetupHub
           </Link>
 
@@ -42,6 +47,11 @@ export function NavBar() {
               <span className="text-sm text-muted-foreground">Loading...</span>
             ) : user ? (
               <>
+                <Avatar>
+                  <AvatarImage src={`${user.photoURL}`} alt={`${user.displayName || user.email}`} />
+                  <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
+                  {/*<AvatarBadge className="bg-green-600 dark:bg-green-800" /> */}
+                </Avatar>
                 <span className="text-sm text-muted-foreground hidden sm:inline">
                   {user.displayName || user.email}
                 </span>

@@ -47,7 +47,7 @@ export function PillBadge({
   return (
     <div
       className={cn(
-        "inline-flex items-center rounded-full border font-medium my-6",
+        "inline-flex items-center rounded-full border font-medium w-fit",
         colorStyles[color],
         modeStyles[mode],
         className

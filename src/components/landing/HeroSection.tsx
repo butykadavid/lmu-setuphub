@@ -1,12 +1,16 @@
 "use client";
 
+import { useAuthGate } from "@/context/landing/AuthGateProvider";
+
 import { Activity } from "lucide-react";
 
 import { GoogleSignInButton } from "@/components/auth/GoogleSignInButton";
 import { Button } from "@/components/ui/button";
-import { PillBadge } from "@/components/ui/PillBadge";
+import { PillBadge } from "@/components/ui/own/PillBadge";
 
 export default function HeroSection() {
+    const { requireAuthNavigation } = useAuthGate();
+
     return (
         <section className="h-screen flex bg-background">
             <div className="flex h-full w-full flex-col justify-between bg-background max-w-7xl">
@@ -19,7 +23,7 @@ export default function HeroSection() {
                         <p className="text-sm text-muted-foreground">
                             Already a member?
                         </p>
-                        <GoogleSignInButton />
+                        <GoogleSignInButton text="Sign In" className="w-32" />
                     </div>
                 </header>
 
@@ -44,7 +48,10 @@ export default function HeroSection() {
                     </p>
 
                     <div className="mt-10 flex flex-wrap gap-4">
-                        <Button className="rounded-xl px-7 py-6 font-semibold">
+                        <Button
+                            className="rounded-xl px-7 py-6 font-semibold"
+                            onClick={() => requireAuthNavigation("/setups")}
+                        >
                             Explore setups
                         </Button>
 

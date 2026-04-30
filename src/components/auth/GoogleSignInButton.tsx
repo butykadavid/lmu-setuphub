@@ -1,16 +1,20 @@
 "use client";
 
 import React, { useState } from "react";
-
-import { KeySquare } from "lucide-react";
+import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
+import { signInWithGoogle } from "@/lib/firebase/auth";
 
-import { signInWithGoogle, signOut } from "@/lib/firebase/auth";
-import { useAuth } from "@/context/AuthContext";
-
-export function GoogleSignInButton() {
-  const { user } = useAuth();
+export function GoogleSignInButton({
+  text = "Sign in with Google",
+  transition = true,
+  className,
+}: {
+  text?: string;
+  transition?: boolean;
+  className?: string;
+}) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -34,13 +38,60 @@ export function GoogleSignInButton() {
       <Button
         onClick={handleSignIn}
         disabled={loading}
-        variant="default"
-        className="w-full"
+        variant="outline"
+        className={`relative overflow-hidden ${transition ? "group" : ""} ${className}`}
       >
-        {loading ? "Signing in..." : <><KeySquare className="h-4 w-4" /> Sign in with Google</>}
+        {/* LOADING STATE */}
+        {loading ? (
+          <span className="flex items-center justify-center">
+            Signing in...
+          </span>
+        ) : transition ? (
+          <>
+            <span
+              className="
+                flex items-center justify-center gap-2
+                transition-opacity duration-300
+                group-hover:opacity-0
+              "
+            >
+              {text}
+            </span>
+
+            <span
+              className="
+                absolute inset-0
+                flex items-center justify-center
+                opacity-0
+                transition-opacity duration-300
+                group-hover:opacity-100
+                mt-1
+              "
+            >
+              <Image
+                src="/icons/google_logo_full.png"
+                alt="Google"
+                width={120}
+                height={24}
+                className="object-contain"
+              />
+            </span>
+          </>
+        ) : (
+          <span className="flex items-center justify-center mt-1">
+            <Image
+              src="/icons/google_logo_full.png"
+              alt="Google"
+              width={120}
+              height={24}
+              className="object-contain"
+            />
+          </span>
+        )}
       </Button>
+
       {error && (
-        <p className="text-sm text-red-500 text-center">{error}</p>
+        <p className="text-sm text-destructive text-center">{error}</p>
       )}
     </div>
   );

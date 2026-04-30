@@ -1,4 +1,4 @@
-import { PillBadge } from "@/components/ui/PillBadge";
+import { PillBadge } from "@/components/ui/own/PillBadge";
 
 const steps = [
   {
