@@ -33,14 +33,6 @@ export function SignOutButton({
         try {
             await signOut();
 
-            const response = await fetch("/api/auth/session", {
-                method: "DELETE",
-            });
-
-            if (!response.ok) {
-                throw new Error("Failed to clear session");
-            }
-
             if (appRoutes.protectedRoutes.includes(pathname)) {
                 router.push("/");
             }

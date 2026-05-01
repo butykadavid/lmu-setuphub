@@ -1,5 +1,10 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyAuthToken, authErrorResponse, authSuccessResponse } from "@/lib/firebase/api-middleware";
+import { NextRequest } from "next/server";
+import {
+  authErrorResponse,
+  authSuccessResponse,
+  isAuthError,
+  verifyBearerAuthToken,
+} from "@/lib/firebase/api-middleware";
 import { adminDb } from "@/lib/firebase/admin";
 
 /**
@@ -13,8 +18,8 @@ import { adminDb } from "@/lib/firebase/admin";
  */
 export async function POST(request: NextRequest) {
   // Verify authentication
-  const auth = await verifyAuthToken(request);
-  if (auth.error) {
+  const auth = await verifyBearerAuthToken(request);
+  if (isAuthError(auth)) {
     return authErrorResponse(auth.error, auth.status);
   }
 
@@ -53,8 +58,8 @@ export async function POST(request: NextRequest) {
  */
 export async function GET(request: NextRequest) {
   // Verify authentication
-  const auth = await verifyAuthToken(request);
-  if (auth.error) {
+  const auth = await verifyBearerAuthToken(request);
+  if (isAuthError(auth)) {
     return authErrorResponse(auth.error, auth.status);
   }
 

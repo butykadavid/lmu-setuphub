@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { inspectDuckDbFile } from "@/lib/telemetry/parse-duckdb-browser";
+import { useAuth } from "@/context/AuthContext";
+import { authorizedJsonFetch } from "../../../lib/firebase/authenticated-fetch";
 
 import FileUploader from "@/components/ui/own/FileUploader";
 import {
@@ -15,7 +17,11 @@ import {
 import {
   TelemetryMetadataPreview,
 } from "@/components/ui/own/TelemetryMetadataPreview";
-import type { TelemetryParseResult } from "@/lib/telemetry/types";
+import type {
+  TelemetryParseResult,
+  TelemetryUploadPayload,
+  TelemetryUploadResponse,
+} from "@/lib/telemetry/types";
 
 
 type UploadDialogProps = {
@@ -24,9 +30,30 @@ type UploadDialogProps = {
 };
 
 export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
+  const { user } = useAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TelemetryParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [uploadSuccess, setUploadSuccess] = useState<string | null>(null);
+
+  function resetDialogState() {
+    setLoading(false);
+    setResult(null);
+    setError(null);
+    setUploading(false);
+    setUploadError(null);
+    setUploadSuccess(null);
+  }
+
+  function handleOpenChange(nextOpen: boolean) {
+    if (!nextOpen) {
+      resetDialogState();
+    }
+
+    onOpenChange(nextOpen);
+  }
 
   async function handleFilesSelected(files: File[]) {
     const file = files[0];
@@ -35,6 +62,8 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     setLoading(true);
     setError(null);
     setResult(null);
+    setUploadError(null);
+    setUploadSuccess(null);
 
     try {
       const parsed = await inspectDuckDbFile(file);
@@ -47,8 +76,42 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     }
   }
 
+  async function handleSubmitUpload(payload: TelemetryUploadPayload) {
+    setUploading(true);
+    setUploadError(null);
+    setUploadSuccess(null);
+
+    try {
+      if (!user) {
+        throw new Error("You must be signed in to upload telemetry");
+      }
+
+      const response = await authorizedJsonFetch(user, "/api/telemetry", {
+        method: "POST",
+        body: payload,
+      });
+
+      const body = await response.json() as TelemetryUploadResponse | { error?: string };
+
+      if (!response.ok) {
+        throw new Error("error" in body && body.error ? body.error : "Failed to upload telemetry");
+      }
+
+      if (!("message" in body)) {
+        throw new Error("Unexpected upload response");
+      }
+
+      setUploadSuccess(body.message);
+    } catch (err) {
+      console.error(err);
+      setUploadError(err instanceof Error ? err.message : "Failed to upload telemetry");
+    } finally {
+      setUploading(false);
+    }
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="min-w-6xl max-h-[90vh] overflow-auto">
         <DialogHeader>
           <DialogTitle>Upload file</DialogTitle>
@@ -64,12 +127,18 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
         {error && <p className="mt-2 text-destructive">{error}</p>}
 
+        {uploadError && <p className="mt-2 text-destructive">{uploadError}</p>}
+
+        {uploadSuccess && <p className="mt-2 text-primary">{uploadSuccess}</p>}
+
         {result && (
           <div className="mt-2">
             <TelemetryMetadataPreview
               metadata={result.metadata}
-              bestLaps={result.bestLaps}
+              bestLap={result.bestLap}
               setup={result.setup}
+              isUploading={uploading}
+              onSubmitUpload={handleSubmitUpload}
             />
           </div>
         )}

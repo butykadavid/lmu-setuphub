@@ -29,23 +29,7 @@ export function GoogleSignInButton({
     setLoading(true);
     setError(null);
     try {
-      const user = await signInWithGoogle();
-
-      if (user) {
-        const idToken = await user.getIdToken();
-
-        const response = await fetch("/api/auth/session", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ idToken }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to create session");
-        }
-      }
+      await signInWithGoogle();
 
       if (appRoutes.publicRoutes.includes(pathname)) {
         router.push("/dashboard");

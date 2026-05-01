@@ -9,16 +9,29 @@ export type MetadataItem = {
 };
 
 export type BestLapItem = {
-  ts: string;
-  value: string;
+  ts: number;
+  value: number;
 };
 
 export type GroupedSetup = Record<SetupCategory, NormalizedSetupItem[]>;
 
 export type TelemetryParseResult = {
   metadata: MetadataItem[];
-  bestLaps: BestLapItem[];
+  bestLap: BestLapItem;
   setup: GroupedSetup;
+};
+
+export type TelemetryUploadPayload = TelemetryParseResult & {
+  selectedCarId: string;
+  selectedCarName: string;
+  driverNote: string;
+  carConfirmed: boolean;
+  dataConfirmed: boolean;
+};
+
+export type TelemetryUploadResponse = {
+  message: string;
+  telemetryId: string;
 };
 
 export type LmuTelemetrySummary = {

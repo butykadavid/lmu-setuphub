@@ -16,6 +16,14 @@ export async function verifyIdToken(token: string): Promise<DecodedIdToken> {
 }
 
 /**
+ * Verify the server session token stored in the __session cookie.
+ * The current session implementation stores a Firebase ID token in that cookie.
+ */
+export async function verifySessionToken(token: string): Promise<DecodedIdToken> {
+  return verifyIdToken(token);
+}
+
+/**
  * Get the current user from an ID token
  */
 export async function getUserFromToken(token: string) {
@@ -51,7 +59,7 @@ export async function getUserData(uid: string) {
  */
 export async function setUserProfile(
   uid: string,
-  data: Record<string, any>
+  data: Record<string, unknown>
 ) {
   try {
     await adminDb.collection("users").doc(uid).set(data, { merge: true });

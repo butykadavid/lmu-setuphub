@@ -1,6 +1,13 @@
-import { NextRequest, NextResponse } from "next/server";
-import { verifyAuthToken, authErrorResponse, authSuccessResponse } from "@/lib/firebase/api-middleware";
+import { NextRequest } from "next/server";
+import {
+  authErrorResponse,
+  authSuccessResponse,
+  isAuthError,
+  verifyBearerAuthToken,
+} from "@/lib/firebase/api-middleware";
 import { getUserData } from "@/lib/firebase/server-auth";
+import { adminDb } from "@/lib/firebase/admin";
+import { Timestamp } from "firebase-admin/firestore";
 
 /**
  * Example protected API route
@@ -14,8 +21,8 @@ import { getUserData } from "@/lib/firebase/server-auth";
  */
 export async function GET(request: NextRequest) {
   // Verify authentication
-  const auth = await verifyAuthToken(request);
-  if (auth.error) {
+  const auth = await verifyBearerAuthToken(request);
+  if (isAuthError(auth)) {
     return authErrorResponse(auth.error, auth.status);
   }
 
@@ -34,45 +41,63 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * Example protected POST route
- * POST /api/user - Update user data in Firestore
+ * POST /api/user - Create or update user document
+ * On first login, creates user record with email, displayName, photoURL
+ * On subsequent updates, updates displayName, photoURL, bio
  */
 export async function POST(request: NextRequest) {
   // Verify authentication
-  const auth = await verifyAuthToken(request);
-  if (auth.error) {
+  const auth = await verifyBearerAuthToken(request);
+  if (isAuthError(auth)) {
     return authErrorResponse(auth.error, auth.status);
   }
 
   try {
     const body = await request.json();
-    const { displayName, photoURL, bio } = body;
+    const { email, displayName, photoURL, bio } = body;
 
-    // Validate input
-    if (!displayName && !photoURL && !bio) {
-      return authErrorResponse("No data to update", 400);
+    // For first login, require email and displayName
+    if (!displayName) {
+      return authErrorResponse("displayName is required", 400);
     }
 
-    // Get admin instance
-    const { adminDb } = await import("@/lib/firebase/admin");
+    const userRef = adminDb.collection("users").doc(auth.uid!);
+    const userDoc = await userRef.get();
+    const now = Timestamp.now();
 
-    // Update user profile in Firestore
-    await adminDb.collection("users").doc(auth.uid!).set(
-      {
+    if (userDoc.exists) {
+      // Update existing user - only update provided fields
+      const updateData: Record<string, any> = {
+        updatedAt: now,
+      };
+      
+      if (displayName) updateData.displayName = displayName;
+      if (photoURL !== undefined) updateData.photoURL = photoURL || null;
+      if (bio !== undefined) updateData.bio = bio;
+
+      await userRef.update(updateData);
+    } else {
+      // Create new user document on first login
+      if (!email) {
+        return authErrorResponse("email is required for new user", 400);
+      }
+
+      await userRef.set({
+        uid: auth.uid!,
+        email,
         displayName,
-        photoURL,
-        bio,
-        updatedAt: new Date(),
-      },
-      { merge: true }
-    );
+        photoURL: photoURL || null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
 
     return authSuccessResponse({
-      message: "User profile updated",
+      message: userDoc.exists ? "User profile updated" : "User created successfully",
       uid: auth.uid,
-    });
+    }, 200);
   } catch (error) {
-    console.error("Error updating user profile:", error);
-    return authErrorResponse("Failed to update user profile", 500);
+    console.error("Error syncing user:", error);
+    return authErrorResponse("Failed to sync user", 500);
   }
 }

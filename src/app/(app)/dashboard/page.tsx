@@ -11,22 +11,10 @@ import { PillBadge } from "@/components/ui/own/PillBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export default function Dashboard() {
-    const { user, loading } = useAuth();
-
-    if (loading) {
-        return (
-            <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-                Loading...
-            </div>
-        );
-    }
+    const { user } = useAuth();
 
     if (!user) {
-        return (
-            <div className="flex min-h-screen items-center justify-center text-muted-foreground">
-                You need to be signed in to view your dashboard.
-            </div>
-        );
+        return null;
     }
 
     return (
@@ -220,7 +208,7 @@ function EmptyContent({
 }) {
     return (
         <Card className="border-dashed">
-            <CardContent className="flex min-h-[320px] flex-col items-center justify-center p-8 text-center">
+            <CardContent className="flex min-h-80 flex-col items-center justify-center p-8 text-center">
                 <div className="mb-5 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                     <Upload className="h-7 w-7" />
                 </div>

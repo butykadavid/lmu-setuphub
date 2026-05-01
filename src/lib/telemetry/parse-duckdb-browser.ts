@@ -58,8 +58,9 @@ export async function inspectDuckDbFile(file: File): Promise<TelemetryParseResul
         SELECT *
         FROM lmu_db."Best LapTime"
         WHERE value > 0
-        ORDER BY value ASC`
-    );
+        ORDER BY value ASC
+        LIMIT 1
+    `);
 
     const setupData = await conn.query(`
         SELECT value
@@ -83,9 +84,12 @@ export async function inspectDuckDbFile(file: File): Promise<TelemetryParseResul
     const normalizedSetup = normalizeSetup(setup);
     const groupedSetup = groupSetupByCategory(normalizedSetup);
 
+    const bestLapsArray = rawQueryResultToArray<BestLapItem>(bestLapsData);
+    const bestLap = bestLapsArray[0] ?? { ts: 0, value: 0 };
+
     return {
         metadata: rawQueryResultToArray<MetadataItem>(metadataResultWithoutSetup),
-        bestLaps: rawQueryResultToArray<BestLapItem>(bestLapsData),
+        bestLap,
         setup: groupedSetup,
     };
 }

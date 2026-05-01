@@ -1,5 +1,4 @@
 import { NavBar } from "@/components/layout/NavBar";
-import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 
 export default function AppLayout({
     children,
@@ -8,8 +7,6 @@ export default function AppLayout({
 }) {
     return <>
         <NavBar />
-        <ProtectedRoute>
-            <main className="flex-1">{children}</main>
-        </ProtectedRoute>
+        <main className="flex-1">{children}</main>
     </>;
 }

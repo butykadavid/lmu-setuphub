@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useState } from "react";
 
-import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer, Info } from "lucide-react";
+import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer } from "lucide-react";
 
 import { convertSecondsToTime } from "@/lib/functions";
 import {
@@ -21,6 +21,7 @@ import {
 } from "../../../lib/telemetry/setup-screen";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
 import {
   Select,
@@ -34,11 +35,14 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
+import type { TelemetryUploadPayload } from "@/lib/telemetry/types";
 
 type TelemetryMetadataPreviewProps = {
   metadata: MetadataItem[];
-  bestLaps: BestLapItem[];
+  bestLap: BestLapItem;
   setup: GroupedSetup;
+  isUploading: boolean;
+  onSubmitUpload: (payload: TelemetryUploadPayload) => Promise<void>;
 };
 
 function getMeta(metadata: MetadataItem[], key: string) {
@@ -47,8 +51,10 @@ function getMeta(metadata: MetadataItem[], key: string) {
 
 export function TelemetryMetadataPreview({
   metadata,
-  bestLaps,
+  bestLap,
   setup,
+  isUploading,
+  onSubmitUpload,
 }: TelemetryMetadataPreviewProps) {
   const trackName = getMeta(metadata, "TrackName");
   const trackLayout = getMeta(metadata, "TrackLayout");
@@ -58,34 +64,37 @@ export function TelemetryMetadataPreview({
   const sessionTime = getMeta(metadata, "SessionTime");
   const sessionType = getMeta(metadata, "SessionType");
   const version = getMeta(metadata, "Version");
-  const bestLapTime = convertSecondsToTime(
-    Number(bestLaps.filter((row) => Number(row.value) > 0)[0]?.value ?? 0)
-  );
+  const bestLapTime = convertSecondsToTime(bestLap.value);
   const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(setup, carClass);
-  const availableCars = useMemo<TelemetryCarRosterEntry[]>(() => getCarsForClass(carClass), [carClass]);
-  const [selectedCarId, setSelectedCarId] = useState("");
+  const availableCars: TelemetryCarRosterEntry[] = getCarsForClass(carClass);
+  const [selectedCarId, setSelectedCarId] = useState(() => findMatchingCarId(carName, availableCars));
   const [driverNote, setDriverNote] = useState("");
   const [carConfirmed, setCarConfirmed] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
 
-  useEffect(() => {
-    const matchedCarId = findMatchingCarId(carName, availableCars);
-    setSelectedCarId(matchedCarId);
-  }, [availableCars, carName]);
-
-  useEffect(() => {
-    setCarConfirmed(false);
-  }, [selectedCarId]);
-
-  useEffect(() => {
-    setDataConfirmed(false);
-  }, [metadata, bestLaps, setup]);
-
   const selectedCar = availableCars.find((car) => car.id === selectedCarId);
+  const canUpload = Boolean(selectedCar) && carConfirmed && dataConfirmed && !isUploading;
   const totalSetupValues = setupTabs.reduce(
     (total, tab) => total + tab.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0),
     0
   );
+
+  async function handleUpload() {
+    if (!selectedCar) {
+      return;
+    }
+
+    await onSubmitUpload({
+      metadata,
+      bestLap,
+      setup,
+      selectedCarId: selectedCar.id,
+      selectedCarName: selectedCar.name,
+      driverNote,
+      carConfirmed,
+      dataConfirmed,
+    });
+  }
 
   return (
     <Card className="overflow-hidden border-border bg-card">
@@ -208,7 +217,13 @@ export function TelemetryMetadataPreview({
             <Field>
               <FieldLabel htmlFor="telemetry-car-select">Car</FieldLabel>
               <InfoTile icon={<Wrench />} label="Entry/Car name" value={carName} />
-              <Select value={selectedCarId} onValueChange={setSelectedCarId}>
+              <Select
+                value={selectedCarId}
+                onValueChange={(value) => {
+                  setSelectedCarId(value);
+                  setCarConfirmed(false);
+                }}
+              >
                 <SelectTrigger id="telemetry-car-select" className="h-10 w-full">
                   <SelectValue placeholder={`Select a car from the ${carClass} roster`} />
                 </SelectTrigger>
@@ -273,7 +288,7 @@ export function TelemetryMetadataPreview({
             </p>
           </div>
 
-          <div className={`${(!metadata || !bestLaps || !setup) && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
+          <div className={`${(!metadata || !setup) && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
               Data validity confirmation required
             </p>
@@ -301,6 +316,24 @@ export function TelemetryMetadataPreview({
             </p>
           </div>
 
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Ready to upload telemetry data</p>
+            <p className="text-xs text-muted-foreground">
+              Upload stays disabled until the selected car and extracted data are both confirmed.
+            </p>
+          </div>
+
+          <Button
+            type="button"
+            onClick={handleUpload}
+            disabled={!canUpload}
+            className="min-w-44"
+          >
+            {isUploading ? "Uploading telemetry..." : "Upload telemetry data"}
+          </Button>
         </section>
       </CardContent>
     </Card>
