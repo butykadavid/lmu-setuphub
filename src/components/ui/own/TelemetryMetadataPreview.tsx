@@ -1,12 +1,15 @@
 import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer } from "lucide-react";
 
 import { convertSecondsToTime } from "@/lib/functions";
-import type { SetupCategory } from "@/lib/telemetry/noramlize-setup";
 import type {
   BestLapItem,
   GroupedSetup,
   MetadataItem,
 } from "@/lib/telemetry/types";
+import {
+  mapSetupToScreenTabs,
+  type SetupScreenTab,
+} from "../../../lib/telemetry/setup-screen";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,41 +22,8 @@ type TelemetryMetadataPreviewProps = {
   setup: GroupedSetup;
 };
 
-const SETUP_CATEGORY_LABELS: Record<SetupCategory, string> = {
-  electronics: "Electronics",
-  brakes: "Brakes",
-  aero: "Aero",
-  suspension: "Suspension",
-  wheels: "Wheels",
-  drivetrain: "Drivetrain",
-  engine: "Engine",
-  strategy: "Strategy",
-  misc: "Misc",
-};
-
-const SETUP_CATEGORY_ORDER: SetupCategory[] = [
-  "electronics",
-  "brakes",
-  "aero",
-  "suspension",
-  "wheels",
-  "drivetrain",
-  "engine",
-  "strategy",
-  "misc",
-];
-
 function getMeta(metadata: MetadataItem[], key: string) {
   return metadata.find((item) => item.key === key)?.value ?? "-";
-}
-
-function isMeaningfulSetupValue(value: string) {
-  return (
-    !!value &&
-    value !== "Standard" &&
-    value !== "Fixed" &&
-    value !== "Non-adjustable"
-  );
 }
 
 export function TelemetryMetadataPreview({
@@ -72,13 +42,7 @@ export function TelemetryMetadataPreview({
   const bestLapTime = convertSecondsToTime(
     Number(bestLaps.filter((row) => Number(row.value) > 0)[0]?.value ?? 0)
   );
-  const setupSections = SETUP_CATEGORY_ORDER
-    .map((category) => ({
-      category,
-      label: SETUP_CATEGORY_LABELS[category],
-      items: setup[category].filter((item) => isMeaningfulSetupValue(item.value)),
-    }))
-    .filter((section) => section.items.length > 0);
+  const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(setup, carClass);
 
   return (
     <Card className="overflow-hidden border-border bg-card">
@@ -112,63 +76,69 @@ export function TelemetryMetadataPreview({
           <InfoTile icon={<Timer />} label="Best lap time" value={bestLapTime} />
         </div>
 
-        {setupSections.length > 0 && (
+        {setupTabs.length > 0 && (
           <section className="space-y-3 border-t border-border/70 pt-4">
             <div className="flex items-center justify-between gap-3">
               <div>
                 <h3 className="text-sm font-semibold text-foreground">Setup details</h3>
                 <p className="text-xs text-muted-foreground">
-                  Categorized car setup values extracted from the telemetry file.
+                  Grouped to mirror the in-game setup tabs for this car category.
                 </p>
               </div>
               <PillBadge
-                text={`${setupSections.reduce((total, section) => total + section.items.length, 0)} values`}
+                text={`${setupTabs.reduce((total, tab) => total + tab.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0), 0)} values`}
                 className="bg-secondary text-secondary-foreground"
               />
             </div>
 
-            <Tabs defaultValue={setupSections[0]?.category} className="gap-0">
+            <Tabs defaultValue={setupTabs[0]?.id} className="gap-3">
               <TabsList
-                className="h-auto w-full justify-start gap-1 overflow-x-auto rounded-none bg-transparent p-0 pb-1"
+                className="h-auto w-full flex-wrap justify-start gap-1 rounded-none bg-transparent p-0 pb-1"
               >
-                {setupSections.map((section) => (
+                {setupTabs.map((tab) => (
                   <TabsTrigger
-                    key={section.category}
-                    value={section.category}
-                    className="h-auto mb-1 flex-none rounded-md px-3 text-xs font-semibold uppercase tracking-[0.14em] data-active:bg-background/70"
+                    key={tab.id}
+                    value={tab.id}
+                    className="h-8 rounded-md border border-border/70 bg-background/40 px-3 text-[11px] font-semibold uppercase tracking-[0.16em] data-active:border-border data-active:bg-background/80"
                   >
-                    {section.label}
+                    {tab.label}
                   </TabsTrigger>
                 ))}
               </TabsList>
 
-              {setupSections.map((section) => (
+              {setupTabs.map((tab) => (
                 <TabsContent
-                  key={section.category}
-                  value={section.category}
+                  key={tab.id}
+                  value={tab.id}
                   className="rounded-lg border border-border bg-background/50 p-3"
                 >
-                  <div className="mb-3">
-                    <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
-                      {section.label}
-                    </h4>
-                    <p className="mt-0.5 text-xs text-muted-foreground/80">
-                      {section.items.length} setup values
-                    </p>
-                  </div>
+                  <div className="space-y-3">
+                    {tab.sections.map((section) => (
+                      <div key={section.id} className="rounded-lg border border-border/60 bg-background/60 p-3">
+                        <div className="mb-2 flex items-center justify-between gap-3">
+                          <h4 className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">
+                            {section.label}
+                          </h4>
+                          <span className="text-[11px] text-muted-foreground">
+                            {section.items.length}
+                          </span>
+                        </div>
 
-                  <div className="grid gap-1.5 md:grid-cols-2">
-                    {section.items.map((item) => (
-                      <div
-                        key={item.key}
-                        className="flex items-start justify-between gap-3 rounded-md bg-background/70 px-2 py-1.5"
-                      >
-                        <span className="min-w-0 text-xs text-muted-foreground">
-                          {item.label}
-                        </span>
-                        <span className="shrink-0 text-right text-xs font-medium text-foreground">
-                          {item.value}
-                        </span>
+                        <div className="space-y-1.5">
+                          {section.items.map((item) => (
+                            <div
+                              key={item.key}
+                              className="flex items-start justify-between gap-3 rounded-md bg-background/70 px-2 py-1.5"
+                            >
+                              <span className="min-w-0 text-xs text-muted-foreground">
+                                {item.label}
+                              </span>
+                              <span className="shrink-0 text-right text-xs font-medium text-foreground">
+                                {item.value}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
