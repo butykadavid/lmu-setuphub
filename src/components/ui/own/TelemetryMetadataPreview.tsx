@@ -36,6 +36,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
 import type { TelemetryUploadPayload } from "@/lib/telemetry/types";
+import Logo from "./Logo";
 
 type TelemetryMetadataPreviewProps = {
   metadata: MetadataItem[];
@@ -81,11 +82,11 @@ export function TelemetryMetadataPreview({
 
   const selectedCarBoxStyle = useMemo(() => {
     if (!selectedCar) {
-      return { className: "opacity-50 pointer-events-none mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2", style: {} };
+      return { className: "relative opacity-50 pointer-events-none mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2", style: {} };
     }
 
     return {
-      className: "mt-3 rounded-lg border-2 border-border/70 p-3 w-1/2",
+      className: "relative mt-3 rounded-lg border-2 border-border/70 p-3 w-1/2",
       style: { backgroundColor: `${selectedCar.color}4d`, borderColor: `${selectedCar.color}4d` }, // 4d = ~30% opacity
     };
   }, [selectedCar]);
@@ -297,6 +298,7 @@ export function TelemetryMetadataPreview({
                 ? "Car verification complete."
                 : "Please complete the check to verify the selected car."}
             </p>
+            <Logo src={`/images/car_logos/${selectedCar?.icon}.png`} name={selectedCar?.name} className="absolute w-6 top-1 right-1 rounded-xs" />
           </div>
 
           <div className={`${(!metadata || !setup) && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
