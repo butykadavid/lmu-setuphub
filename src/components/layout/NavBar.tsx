@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -21,19 +21,10 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle
-} from "@/components/ui/dialog"
 import { SignOutButton } from "@/components/auth/SignOutButton";
 import { ThemeToggle } from "@/components/ui/own/ThemeToggle";
 import { Button } from "@/components/ui/button";
-import FileUploader from "@/components/ui/own/FileUploader";
-
-import { inspectDuckDbFile } from "../../lib/telemetry/parse-duckdb-browser";
+import { UploadDialog } from "@/components/ui/own/UploadDialog";
 
 export function NavBar() {
   const { user, loading } = useAuth();
@@ -129,143 +120,5 @@ export function NavBar() {
       <UploadDialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen} />
 
     </>
-  );
-}
-
-const UploadDialog = ({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) => {
-  const [loading, setLoading] = useState(false);
-  const [result, setResult] = useState<any>(null);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleFilesSelected(files: File[]) {
-    const file = files[0];
-    if (!file) return;
-
-    setLoading(true);
-    setError(null);
-    setResult(null);
-
-    try {
-      const parsed = await inspectDuckDbFile(file);
-      setResult(parsed);
-    } catch (err) {
-      console.error(err);
-      setError(err instanceof Error ? err.message : "Failed to parse file");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="min-w-4xl max-h-[90vh] overflow-auto">
-        <DialogHeader>
-          <DialogTitle>Upload file</DialogTitle>
-          <DialogDescription>
-            Grab your generated telemetry file and drop it here!
-          </DialogDescription>
-        </DialogHeader>
-        <FileUploader onFilesSelected={handleFilesSelected} />
-
-        {loading && (
-          <p className="mt-4 text-muted-foreground">Inspecting DuckDB file...</p>
-        )}
-
-        {error && (
-          <p className="mt-4 text-destructive">{error}</p>
-        )}
-
-        {result && (
-          <div className="mt-8">
-            <TelemetryMetadataPreview metadata={result.metadata} />
-          </div>
-        )}
-
-      </DialogContent>
-    </Dialog>
-  )
-}
-
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Car, Cloud, Clock, Flag, MapPinned, Route, Timer, Wrench } from "lucide-react";
-
-type MetadataItem = {
-  key: string;
-  value: string;
-};
-
-function getMeta(metadata: MetadataItem[], key: string) {
-  return metadata.find((item) => item.key === key)?.value ?? "—";
-}
-
-export function TelemetryMetadataPreview({
-  metadata,
-}: {
-  metadata: MetadataItem[];
-}) {
-  const trackName = getMeta(metadata, "TrackName");
-  const trackLayout = getMeta(metadata, "TrackLayout");
-  const carClass = getMeta(metadata, "CarClass");
-  const carName = getMeta(metadata, "CarName");
-  const weather = getMeta(metadata, "WeatherConditions");
-  const sessionTime = getMeta(metadata, "SessionTime");
-  const sessionType = getMeta(metadata, "SessionType");
-  const version = getMeta(metadata, "Version");
-
-  return (
-    <Card className="overflow-hidden border-border bg-card">
-      <CardHeader className="border-b border-border">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <CardTitle className="text-2xl font-black tracking-tight">
-              Telemetry detected
-            </CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Review the extracted session details before publishing.
-            </p>
-          </div>
-
-          <Badge className="bg-primary/10 text-primary hover:bg-primary/10">
-            LMU telemetry v{version}
-          </Badge>
-        </div>
-      </CardHeader>
-
-      <CardContent className="grid gap-4 p-6 md:grid-cols-2">
-        <InfoTile icon={<MapPinned />} label="Track" value={trackName} />
-        <InfoTile icon={<Route />} label="Layout" value={trackLayout} />
-        <InfoTile icon={<Car />} label="Car class" value={carClass} />
-        <InfoTile icon={<Wrench />} label="Entry / car name" value={carName} />
-        <InfoTile icon={<Cloud />} label="Weather" value={weather} />
-        <InfoTile icon={<Clock />} label="Session time" value={sessionTime} />
-        <InfoTile icon={<Flag />} label="Session type" value={sessionType} />
-      </CardContent>
-    </Card>
-  );
-}
-
-function InfoTile({
-  icon,
-  label,
-  value,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-}) {
-  return (
-    <div className="rounded-2xl border border-border bg-background/60 p-4">
-      <div className="mb-3 flex items-center gap-2 text-sm text-muted-foreground">
-        <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-primary/10 text-primary [&>svg]:h-4 [&>svg]:w-4">
-          {icon}
-        </span>
-        {label}
-      </div>
-
-      <div className="break-words text-lg font-bold text-foreground">
-        {value}
-      </div>
-    </div>
   );
 }
