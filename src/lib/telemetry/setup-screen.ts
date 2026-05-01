@@ -14,7 +14,11 @@ export type SetupScreenCarProfile = "default" | "gt3" | "gte" | "lmp3" | "lmp2" 
 export type SetupScreenSection = {
     id: string;
     label: string;
-    items: NormalizedSetupItem[];
+    items: SetupScreenItem[];
+};
+
+export type SetupScreenItem = NormalizedSetupItem & {
+    isDisabled: boolean;
 };
 
 export type SetupScreenTab = {
@@ -28,7 +32,12 @@ type SectionConfig = {
     tab: SetupScreenTabId;
     label: string;
     hiddenForProfiles?: SetupScreenCarProfile[];
-    match: (item: NormalizedSetupItem) => boolean;
+    match: (item: SetupScreenItem) => boolean;
+};
+
+type SetupScreenCarClassKeyMaps = {
+    hidden: string[];
+    disabled: string[];
 };
 
 const TAB_LABELS: Record<SetupScreenTabId, string> = {
@@ -49,17 +58,178 @@ const TAB_ORDER: SetupScreenTabId[] = [
     "chassis-aero",
 ];
 
+export const SECTION_ITEM_ORDER: Partial<Record<string, string[]>> = {
+    "basic.tyre-management": [
+        "*FL*",
+        "*FR*",
+        "*RL*",
+        "*RR*"
+    ],
+    "basic.electronics": [
+        "*BALANCE*",
+        "*ANTILOCK*",
+        "*TRACTION*"
+    ],
+    "powertrain.engine": [
+        "*VIRTUAL*",
+        "*FUEL*",
+        "*REV*",
+        "*MIXTURE*",
+        "*WATER*",
+        "*OIL*"
+    ],
+    "powertrain.electronics": [
+        "*TRACTION*",
+        "*REGEN*",
+        "*MOTOR*",
+    ],
+    "powertrain.differential": [
+        "*VM_DIFF_POWER*",
+        "*VM_DIFF_COAST*",
+        "*VM_DIFF*",
+        "*POWER*",
+        "*COAST*",
+        "*PRELOAD*"
+    ],
+    "powertrain.gearing": [
+        "*RATIO*"
+    ],
+    "wheel-brakes.front-wheels": [
+        "*COMPOUND*",
+        "*PRESSURE*",
+        "*CAMBER*",
+        "*BRAKE*"
+    ],
+    "wheel-brakes.rear-wheels": [
+        "*COMPOUND*",
+        "*PRESSURE*",
+        "*CAMBER*",
+        "*BRAKE*"
+    ],
+    "wheel-brakes.brakes": [
+        "*BALANCE*",
+        "*MIGRATION*",
+        "*PRESSURE*",
+        "*DUCTS*",
+        "*ANTILOCK*",
+    ],
+    "suspension.front-suspension": [
+        "*WM_SPRING-W_FL*",
+        "*WM_SPRING-W_FR*",
+        "*TENDERSPRINGTRAVEL-W_FL*",
+        "*3RD_TENDERSPRINGTRAVEL*",
+        "*TENDERSPRINGTRAVEL-W_FR*",
+        "*PACKERS*",
+        "*RIDEHEIGHT*",
+        "*RUBBER*",
+        "*TENDERSPRING-W_FL*",
+        "*TENDERSPRING*"
+    ],
+    "suspension.rear-suspension": [
+        "*WM_SPRING-W_RL*",
+        "*WM_SPRING-W_RR*",
+        "*TENDERSPRINGTRAVEL-W_RL*",
+        "*3RD_TENDERSPRINGTRAVEL*",
+        "*TENDERSPRINGTRAVEL-W_RR*",
+        "*PACKERS*",
+        "*RIDEHEIGHT*",
+        "*RUBBER*",
+        "*TENDERSPRING-W_RL*",
+        "*TENDERSPRING*"
+    ],
+    "dampers.front-dampers": [
+        "*SLOW*",
+        "*FAST*"
+    ],
+    "dampers.rear-dampers": [
+        "*SLOW*",
+        "*FAST*"
+    ],
+    "chassis-aero.front-chassis": [
+        "*CASTER*",
+        "*TOE*",
+        "*SWAY*",
+        "*TRACK*",
+        "*STEER*",
+        "*WING*"
+    ],
+    "chassis-aero.rear-chassis": [
+        "*TOE*",
+        "*SWAY*",
+        "*TRACK*",
+        "*STEER*",
+        "*WING*"
+    ],
+    "chassis-aero.weight": [
+        "*VERTICAL*",
+        "*LATERAL*",
+        "*DIST*"
+    ]
+};
+
+export const CARCLASS_ITEM_KEY_MAPS: Record<SetupScreenCarProfile, SetupScreenCarClassKeyMaps> = {
+    default: {
+        hidden: [],
+        disabled: [],
+    },
+    gt3: {
+        hidden: [
+            "*FUEL_CAPACITY*",
+            "*DIFF_PUMP*",
+            "*TORQUE*",
+            "*WEIGHT*",
+            "VM_FRONT_3RD_TENDERSPRING",
+            "*TENDERSPRING-*",
+        ],
+        disabled: [
+            "*DIFF_POWER*",
+            "*DIFF_COAST*",
+            "*FRONT_DIFF_PRELOAD*",
+            "*REV*",
+            "*RATIO*",
+            "*REGEN*",
+            "*MOTOR*",
+            "*DISC*",
+            "*MIGRATION*",
+            "*TENDERSPRINGTRAVEL*",
+            "*FRONT_WING*",
+            "*CASTER*",
+            "*WHEEL_TRACK*"
+        ],
+    },
+    gte: {
+        hidden: [
+            "*VIRTUAL_ENERGY*",
+        ],
+        disabled: [],
+    },
+    lmp3: {
+        hidden: [],
+        disabled: [],
+    },
+    lmp2: {
+        hidden: [],
+        disabled: [],
+    },
+    hypercar: {
+        hidden: [],
+        disabled: [],
+    },
+};
+
 function includesAny(value: string, tokens: string[]) {
     return tokens.some((token) => value.includes(token));
 }
 
 function isMeaningfulSetupValue(value: string) {
-    return (
-        !!value &&
-        value !== "Standard" &&
-        value !== "Fixed" &&
-        value !== "Non-adjustable"
-    );
+    return true
+
+    // return (
+    //     !!value &&
+    //     value !== "Standard" &&
+    //     value !== "Fixed" &&
+    //     value !== "Non-adjustable"
+    // );
 }
 
 // Basic is a special tab for the most common and easily identifiable settings
@@ -99,7 +269,6 @@ function isThirdSpringKey(key: string) {
 }
 
 function isWheelKey(key: string) {
-    console.log(key)
     return (
         includesAny(key, ["PRESSURE", "COMPOUND", "CAMBER", "BRAKEDISC", "TYRE"])
     );
@@ -114,11 +283,12 @@ function isDamperKey(key: string) {
 }
 
 function isSuspensionKey(key: string) {
+    console.log(key)
     return includesAny(key, [
         "SPRING",
         "PACKERS",
         "RIDEHEIGHT",
-        "SPRINGRUBBER",
+        "SPRINGRUBBER"
     ]);
 }
 
@@ -179,6 +349,89 @@ function detectCarProfile(carClass: string): SetupScreenCarProfile {
         default:
             return "default";
     }
+}
+
+export function getSectionOrderRules(tab: SetupScreenTabId, sectionId: string): string[] {
+    const tabSectionRules = SECTION_ITEM_ORDER[`${tab}.${sectionId}`];
+
+    if (tabSectionRules && tabSectionRules.length > 0) {
+        return tabSectionRules;
+    }
+
+    return SECTION_ITEM_ORDER[sectionId] ?? [];
+}
+
+function doesKeyMatchToken(itemKey: string, rawToken: string): boolean {
+    const normalizedKey = itemKey.toUpperCase();
+    const token = rawToken.trim().toUpperCase();
+
+    if (!token) {
+        return false;
+    }
+
+    if (token === "*") {
+        return true;
+    }
+
+    if (token.startsWith("*") && token.endsWith("*") && token.length > 2) {
+        const containsToken = token.slice(1, -1);
+        return !!containsToken && normalizedKey.includes(containsToken);
+    }
+
+    if (token.startsWith("*")) {
+        const suffix = token.slice(1);
+        return !!suffix && normalizedKey.endsWith(suffix);
+    }
+
+    if (token.endsWith("*")) {
+        const prefix = token.slice(0, -1);
+        return !!prefix && normalizedKey.startsWith(prefix);
+    }
+
+    return normalizedKey === token;
+}
+
+export function getItemOrderIndex(itemKey: string, rules: string[]): number {
+    for (let i = 0; i < rules.length; i += 1) {
+        const rawRule = rules[i]?.trim();
+        if (!rawRule) continue;
+
+        if (doesKeyMatchToken(itemKey, rawRule)) {
+            return i;
+        }
+    }
+
+    return Number.POSITIVE_INFINITY;
+}
+
+export function sortSectionItems(
+    tab: SetupScreenTabId,
+    sectionId: string,
+    items: SetupScreenItem[]
+): SetupScreenItem[] {
+    const rules = getSectionOrderRules(tab, sectionId);
+
+    return [...items].sort((a, b) => {
+        const aIndex = getItemOrderIndex(a.key, rules);
+        const bIndex = getItemOrderIndex(b.key, rules);
+        const aMatched = Number.isFinite(aIndex);
+        const bMatched = Number.isFinite(bIndex);
+
+        if (aMatched !== bMatched) {
+            return aMatched ? -1 : 1;
+        }
+
+        if (aMatched && bMatched && aIndex !== bIndex) {
+            return aIndex - bIndex;
+        }
+
+        const byLabel = a.label.localeCompare(b.label, undefined, { sensitivity: "base" });
+        if (byLabel !== 0) {
+            return byLabel;
+        }
+
+        return a.key.localeCompare(b.key, undefined, { sensitivity: "base" });
+    });
 }
 
 const SECTION_CONFIGS: SectionConfig[] = [
@@ -334,7 +587,7 @@ const SECTION_CONFIGS: SectionConfig[] = [
         label: "Front chassis",
         match: (item) => {
             const key = item.key.toUpperCase();
-            return isChassisKey(key) && isFrontKey(key) && !key.includes("WEIGHT") && !key.includes("CHASSIS_ADJUSTMENT") || key.includes("STEER_LOCK");
+            return ((isChassisKey(key) && isFrontKey(key)) || key.includes("CASTER") || key.includes("STEER")) && !key.includes("WEIGHT") && !key.includes("CHASSIS_ADJUSTMENT");
         },
     },
     {
@@ -350,14 +603,12 @@ const SECTION_CONFIGS: SectionConfig[] = [
         id: "weight",
         tab: "chassis-aero",
         label: "Weight",
-        hiddenForProfiles: ["gt3"],
         match: (item) => item.key.toUpperCase().includes("WEIGHT"),
     },
     {
         id: "advanced-chassis",
         tab: "chassis-aero",
         label: "Advanced chassis",
-        hiddenForProfiles: ["gt3"],
         match: (item) => item.key.toUpperCase().includes("CHASSIS_ADJUSTMENT"),
     }
 ];
@@ -393,9 +644,19 @@ export function mapSetupToScreenTabs(
     carClass: string
 ): SetupScreenTab[] {
     const profile = detectCarProfile(carClass);
+    const defaultKeyMaps = CARCLASS_ITEM_KEY_MAPS.default;
+    const profileKeyMaps = CARCLASS_ITEM_KEY_MAPS[profile];
+    const hiddenTokens = [...defaultKeyMaps.hidden, ...profileKeyMaps.hidden];
+    const disabledTokens = [...defaultKeyMaps.disabled, ...profileKeyMaps.disabled];
+
     const allItems = Object.values(setup)
         .flat()
-        .filter((item) => isMeaningfulSetupValue(item.value));
+        .filter((item) => isMeaningfulSetupValue(item.value))
+        .filter((item) => !hiddenTokens.some((token) => doesKeyMatchToken(item.key, token)))
+        .map<SetupScreenItem>((item) => ({
+            ...item,
+            isDisabled: disabledTokens.some((token) => doesKeyMatchToken(item.key, token)),
+        }));
     const matchedKeys = new Set<string>();
     const sectionsByTab: Record<SetupScreenTabId, SetupScreenSection[]> = {
         "basic": [],
@@ -425,31 +686,34 @@ export function mapSetupToScreenTabs(
         });
     }
 
-    const remainingItems = allItems.filter((item) => !matchedKeys.has(item.key));
+    // const remainingItems = allItems.filter((item) => !matchedKeys.has(item.key));
 
-    for (const item of remainingItems) {
-        const tab = fallbackTabForItem(item);
-        const fallbackSectionId = `${tab}-other`;
-        const fallbackSectionLabel = "Additional settings";
-        const existingSection = sectionsByTab[tab].find(
-            (section) => section.id === fallbackSectionId
-        );
+    // for (const item of remainingItems) {
+    //     const tab = fallbackTabForItem(item);
+    //     const fallbackSectionId = `${tab}-other`;
+    //     const fallbackSectionLabel = "Additional settings";
+    //     const existingSection = sectionsByTab[tab].find(
+    //         (section) => section.id === fallbackSectionId
+    //     );
 
-        if (existingSection) {
-            existingSection.items.push(item);
-            continue;
-        }
+    //     if (existingSection) {
+    //         existingSection.items.push(item);
+    //         continue;
+    //     }
 
-        sectionsByTab[tab].push({
-            id: fallbackSectionId,
-            label: fallbackSectionLabel,
-            items: [item],
-        });
-    }
+    //     sectionsByTab[tab].push({
+    //         id: fallbackSectionId,
+    //         label: fallbackSectionLabel,
+    //         items: [item],
+    //     });
+    // }
 
     return TAB_ORDER.map((tab) => ({
         id: tab,
         label: TAB_LABELS[tab],
-        sections: sectionsByTab[tab],
+        sections: sectionsByTab[tab].map((section) => ({
+            ...section,
+            items: sortSectionItems(tab, section.id, section.items),
+        })),
     })).filter((tab) => tab.sections.length > 0);
 }

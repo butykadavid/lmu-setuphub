@@ -128,7 +128,11 @@ export function TelemetryMetadataPreview({
                           {section.items.map((item) => (
                             <div
                               key={item.key}
-                              className="flex items-start justify-between gap-3 rounded-md bg-background/70 px-2 py-1.5"
+                              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 ${
+                                item.isDisabled
+                                  ? "bg-muted/40 opacity-45"
+                                  : "bg-background/70"
+                              }`}
                             >
                               <span className="min-w-0 text-xs text-muted-foreground">
                                 {item.label}
