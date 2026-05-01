@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer } from "lucide-react";
 
@@ -79,6 +79,17 @@ export function TelemetryMetadataPreview({
     0
   );
 
+  const selectedCarBoxStyle = useMemo(() => {
+    if (!selectedCar) {
+      return { className: "opacity-50 pointer-events-none mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2", style: {} };
+    }
+
+    return {
+      className: "mt-3 rounded-lg border-2 border-border/70 p-3 w-1/2",
+      style: { backgroundColor: `${selectedCar.color}4d`, borderColor: `${selectedCar.color}4d` }, // 4d = ~30% opacity
+    };
+  }, [selectedCar]);
+
   async function handleUpload() {
     if (!selectedCar) {
       return;
@@ -116,7 +127,7 @@ export function TelemetryMetadataPreview({
         </div>
       </CardHeader>
 
-      <CardContent className="space-y-4 p-4">
+      <CardContent className="space-y-4 p-4 pb-0">
         <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
           <InfoTile icon={<MapPinned />} label="Track" value={trackName} />
           <InfoTile icon={<Route />} label="Layout" value={trackLayout} />
@@ -260,12 +271,12 @@ export function TelemetryMetadataPreview({
         </section>
 
         <section className="flex gap-4">
-          <div className={`${!selectedCar && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
+          <div className={selectedCarBoxStyle.className} style={selectedCarBoxStyle.style}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
               Car confirmation required
             </p>
 
-            <label htmlFor="confirm-selected-car" className="flex cursor-pointer items-start gap-2">
+            <label htmlFor="confirm-selected-car" className="flex cursor-pointer items-center gap-2">
               <input
                 id="confirm-selected-car"
                 type="checkbox"
@@ -276,7 +287,7 @@ export function TelemetryMetadataPreview({
                 }}
                 className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
               />
-              <span className="text-xs text-muted-foreground">
+              <span className="text-xs mt-1 text-muted-foreground">
                 I confirm the telemetry was recorded with {selectedCar?.name}.
               </span>
             </label>
@@ -293,7 +304,7 @@ export function TelemetryMetadataPreview({
               Data validity confirmation required
             </p>
 
-            <label htmlFor="confirm-data-validity" className="flex cursor-pointer items-start gap-2">
+            <label htmlFor="confirm-data-validity" className="flex cursor-pointer items-center gap-2">
               <input
                 id="confirm-data-validity"
                 type="checkbox"
@@ -330,7 +341,7 @@ export function TelemetryMetadataPreview({
             type="button"
             onClick={handleUpload}
             disabled={!canUpload}
-            className="min-w-44"
+            className="min-w-44 py-5"
           >
             {isUploading ? "Uploading telemetry..." : "Upload telemetry data"}
           </Button>

@@ -283,7 +283,6 @@ function isDamperKey(key: string) {
 }
 
 function isSuspensionKey(key: string) {
-    console.log(key)
     return includesAny(key, [
         "SPRING",
         "PACKERS",
