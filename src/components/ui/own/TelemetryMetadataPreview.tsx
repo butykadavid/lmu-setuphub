@@ -1,6 +1,15 @@
-import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer } from "lucide-react";
+"use client";
+
+import { useEffect, useMemo, useState } from "react";
+
+import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer, Info } from "lucide-react";
 
 import { convertSecondsToTime } from "@/lib/functions";
+import {
+  findMatchingCarId,
+  getCarsForClass,
+  type TelemetryCarRosterEntry,
+} from "@/lib/telemetry/carDictionary";
 import type {
   BestLapItem,
   GroupedSetup,
@@ -12,6 +21,16 @@ import {
 } from "../../../lib/telemetry/setup-screen";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
@@ -43,6 +62,30 @@ export function TelemetryMetadataPreview({
     Number(bestLaps.filter((row) => Number(row.value) > 0)[0]?.value ?? 0)
   );
   const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(setup, carClass);
+  const availableCars = useMemo<TelemetryCarRosterEntry[]>(() => getCarsForClass(carClass), [carClass]);
+  const [selectedCarId, setSelectedCarId] = useState("");
+  const [driverNote, setDriverNote] = useState("");
+  const [carConfirmed, setCarConfirmed] = useState(false);
+  const [dataConfirmed, setDataConfirmed] = useState(false);
+
+  useEffect(() => {
+    const matchedCarId = findMatchingCarId(carName, availableCars);
+    setSelectedCarId(matchedCarId);
+  }, [availableCars, carName]);
+
+  useEffect(() => {
+    setCarConfirmed(false);
+  }, [selectedCarId]);
+
+  useEffect(() => {
+    setDataConfirmed(false);
+  }, [metadata, bestLaps, setup]);
+
+  const selectedCar = availableCars.find((car) => car.id === selectedCarId);
+  const totalSetupValues = setupTabs.reduce(
+    (total, tab) => total + tab.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0),
+    0
+  );
 
   return (
     <Card className="overflow-hidden border-border bg-card">
@@ -86,7 +129,7 @@ export function TelemetryMetadataPreview({
                 </p>
               </div>
               <PillBadge
-                text={`${setupTabs.reduce((total, tab) => total + tab.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0), 0)} values`}
+                text={`${totalSetupValues} values`}
                 className="bg-secondary text-secondary-foreground"
               />
             </div>
@@ -128,11 +171,10 @@ export function TelemetryMetadataPreview({
                           {section.items.map((item) => (
                             <div
                               key={item.key}
-                              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 ${
-                                item.isDisabled
-                                  ? "bg-muted/40 opacity-45"
-                                  : "bg-background/70"
-                              }`}
+                              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 ${item.isDisabled
+                                ? "bg-muted/40 opacity-45"
+                                : "bg-background/70"
+                                }`}
                             >
                               <span className="min-w-0 text-xs text-muted-foreground">
                                 {item.label}
@@ -151,6 +193,115 @@ export function TelemetryMetadataPreview({
             </Tabs>
           </section>
         )}
+
+        <section className="space-y-3 border-t border-border/70 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h3 className="text-sm font-semibold text-foreground">Submission details</h3>
+              <p className="text-xs text-muted-foreground">
+                Add a short note and select the exact car for this telemetry upload.
+              </p>
+            </div>
+          </div>
+
+          <FieldGroup className="flex flex-row gap-4">
+            <Field>
+              <FieldLabel htmlFor="telemetry-car-select">Car</FieldLabel>
+              <InfoTile icon={<Wrench />} label="Entry/Car name" value={carName} />
+              <Select value={selectedCarId} onValueChange={setSelectedCarId}>
+                <SelectTrigger id="telemetry-car-select" className="h-10 w-full">
+                  <SelectValue placeholder={`Select a car from the ${carClass} roster`} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectGroup>
+                    <SelectLabel>Cars</SelectLabel>
+                    {availableCars.map((car) => (
+                      <SelectItem key={car.id} value={car.id}>
+                        <span className="h-2 w-2 inline-block rounded-xs" style={{ backgroundColor: car.color }}></span>{car.name}
+                      </SelectItem>
+                    ))}
+                  </SelectGroup>
+                </SelectContent>
+              </Select>
+              <FieldDescription>
+                As currently there are no exposed data points by the game to reliably identify the exact car used, this selection is required to ensure the telemetry is associated with the correct car in our database. The system will attempt to match the car name from the telemetry to the roster, but please verify and adjust if necessary.
+              </FieldDescription>
+            </Field>
+
+            <Field>
+              <FieldLabel htmlFor="telemetry-driver-note">Driver note</FieldLabel>
+              <textarea
+                id="telemetry-driver-note"
+                value={driverNote}
+                onChange={(event) => setDriverNote(event.target.value)}
+                placeholder="Add context about the setup, driving style, track conditions, or what changed in this session."
+                className="min-h-28 w-full resize-y rounded-lg border border-input bg-transparent px-3 py-2 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+              />
+              <FieldDescription>
+                Use this for notes that should travel with the upload, like setup intent or lap context.
+              </FieldDescription>
+            </Field>
+          </FieldGroup>
+        </section>
+
+        <section className="flex gap-4">
+          <div className={`${!selectedCar && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+              Car confirmation required
+            </p>
+
+            <label htmlFor="confirm-selected-car" className="flex cursor-pointer items-start gap-2">
+              <input
+                id="confirm-selected-car"
+                type="checkbox"
+                checked={carConfirmed}
+                onChange={(event) => {
+                  const nextValue = event.target.checked;
+                  setCarConfirmed(nextValue);
+                }}
+                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                I confirm the telemetry was recorded with {selectedCar?.name}.
+              </span>
+            </label>
+
+            <p className={`mt-2 text-xs ${carConfirmed ? "text-primary" : "text-muted-foreground"}`}>
+              {carConfirmed
+                ? "Car verification complete."
+                : "Please complete the check to verify the selected car."}
+            </p>
+          </div>
+
+          <div className={`${(!metadata || !bestLaps || !setup) && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
+            <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
+              Data validity confirmation required
+            </p>
+
+            <label htmlFor="confirm-data-validity" className="flex cursor-pointer items-start gap-2">
+              <input
+                id="confirm-data-validity"
+                type="checkbox"
+                checked={dataConfirmed}
+                onChange={(event) => {
+                  const nextValue = event.target.checked;
+                  setDataConfirmed(nextValue);
+                }}
+                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
+              />
+              <span className="text-xs text-muted-foreground">
+                I confirm that the telemetry analysis and extracted details are correct based on my review.
+              </span>
+            </label>
+
+            <p className={`mt-2 text-xs ${dataConfirmed ? "text-primary" : "text-muted-foreground"}`}>
+              {dataConfirmed
+                ? "Data verification complete."
+                : "Please complete the check to verify the data."}
+            </p>
+          </div>
+
+        </section>
       </CardContent>
     </Card>
   );
