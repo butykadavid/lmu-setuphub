@@ -18,7 +18,7 @@ import type {
 import {
   mapSetupToScreenTabs,
   type SetupScreenTab,
-} from "../../../lib/telemetry/setup-screen";
+} from "@/lib/telemetry/setup-screen";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -36,7 +36,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
 import type { TelemetryUploadPayload } from "@/lib/telemetry/types";
-import Logo from "./Logo";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/togglegroup";
 
 type TelemetryMetadataPreviewProps = {
   metadata: MetadataItem[];
@@ -66,12 +68,17 @@ export function TelemetryMetadataPreview({
   const sessionType = getMeta(metadata, "SessionType");
   const version = getMeta(metadata, "Version");
   const bestLapTime = convertSecondsToTime(bestLap.value);
+
   const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(setup, carClass);
   const availableCars: TelemetryCarRosterEntry[] = getCarsForClass(carClass);
+
   const [selectedCarId, setSelectedCarId] = useState(() => findMatchingCarId(carName, availableCars));
   const [driverNote, setDriverNote] = useState("");
+
   const [carConfirmed, setCarConfirmed] = useState(false);
   const [dataConfirmed, setDataConfirmed] = useState(false);
+
+  const [visibility, setVisibility] = useState<"public" | "private" | "teams-only">("public");
 
   const selectedCar = availableCars.find((car) => car.id === selectedCarId);
   const canUpload = Boolean(selectedCar) && carConfirmed && dataConfirmed && !isUploading;
@@ -82,11 +89,11 @@ export function TelemetryMetadataPreview({
 
   const selectedCarBoxStyle = useMemo(() => {
     if (!selectedCar) {
-      return { className: "relative opacity-50 pointer-events-none mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2", style: {} };
+      return { className: "relative flex flex-col justify-between opacity-50 pointer-events-none mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2", style: {} };
     }
 
     return {
-      className: "relative mt-3 rounded-lg border-2 border-border/70 p-3 w-1/2",
+      className: "relative flex flex-col justify-between mt-3 rounded-lg border-2 border-border/70 p-3 w-1/2",
       style: { backgroundColor: `${selectedCar.color}4d`, borderColor: `${selectedCar.color}4d` }, // 4d = ~30% opacity
     };
   }, [selectedCar]);
@@ -105,10 +112,11 @@ export function TelemetryMetadataPreview({
       driverNote,
       carConfirmed,
       dataConfirmed,
+      visibility,
     });
   }
 
-  return (
+  return <>
     <Card className="overflow-hidden border-border bg-card">
       <CardHeader className="border-b border-border">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -277,50 +285,47 @@ export function TelemetryMetadataPreview({
               Car confirmation required
             </p>
 
-            <label htmlFor="confirm-selected-car" className="flex cursor-pointer items-center gap-2">
-              <input
-                id="confirm-selected-car"
-                type="checkbox"
-                checked={carConfirmed}
-                onChange={(event) => {
-                  const nextValue = event.target.checked;
-                  setCarConfirmed(nextValue);
-                }}
-                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
-              />
-              <span className="text-xs mt-1 text-muted-foreground">
-                I confirm the telemetry was recorded with {selectedCar?.name}.
-              </span>
-            </label>
+            <FieldGroup className="flex cursor-pointer items-center gap-2">
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="confirm-selected-car"
+                  name="confirm-selected-car"
+                  checked={carConfirmed}
+                  onCheckedChange={() => setCarConfirmed((prev) => !prev)}
+                  className="mt-0.5 h-4 w-4 rounded border-input cursor-pointer"
+                />
+                <Label htmlFor="confirm-selected-car" className="cursor-pointer text-xs text-primary/90">
+                  I confirm the telemetry was recorded with {selectedCar?.name}.
+                </Label>
+              </Field>
+            </FieldGroup>
 
             <p className={`mt-2 text-xs ${carConfirmed ? "text-primary" : "text-muted-foreground"}`}>
               {carConfirmed
                 ? "Car verification complete."
                 : "Please complete the check to verify the selected car."}
             </p>
-            <Logo src={`/images/car_logos/${selectedCar?.icon}.png`} name={selectedCar?.name} className="absolute w-6 top-1 right-1 rounded-xs" />
           </div>
 
-          <div className={`${(!metadata || !setup) && "opacity-50 pointer-events-none"} mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
+          <div className={`${(!metadata || !setup) && "opacity-50 pointer-events-none"} flex flex-col justify-between mt-3 rounded-lg border border-border/70 bg-muted/30 p-3 w-1/2`}>
             <p className="mb-2 text-xs font-semibold uppercase tracking-[0.14em] text-foreground">
               Data validity confirmation required
             </p>
 
-            <label htmlFor="confirm-data-validity" className="flex cursor-pointer items-center gap-2">
-              <input
-                id="confirm-data-validity"
-                type="checkbox"
-                checked={dataConfirmed}
-                onChange={(event) => {
-                  const nextValue = event.target.checked;
-                  setDataConfirmed(nextValue);
-                }}
-                className="mt-0.5 h-4 w-4 rounded border-input accent-primary"
-              />
-              <span className="text-xs text-muted-foreground">
-                I confirm that the telemetry analysis and extracted details are correct based on my review.
-              </span>
-            </label>
+            <FieldGroup className="flex cursor-pointer items-center gap-2">
+              <Field orientation="horizontal">
+                <Checkbox
+                  id="confirm-data-validity"
+                  name="confirm-data-validity"
+                  checked={dataConfirmed}
+                  onCheckedChange={() => setDataConfirmed((prev) => !prev)}
+                  className="mt-0.5 h-4 w-4 rounded border-input cursor-pointer"
+                />
+                <Label htmlFor="confirm-data-validity" className="cursor-pointer text-xs text-primary/90">
+                  I confirm the telemetry analysis and extracted details are correct based on my review.
+                </Label>
+              </Field>
+            </FieldGroup>
 
             <p className={`mt-2 text-xs ${dataConfirmed ? "text-primary" : "text-muted-foreground"}`}>
               {dataConfirmed
@@ -328,6 +333,22 @@ export function TelemetryMetadataPreview({
                 : "Please complete the check to verify the data."}
             </p>
           </div>
+
+        </section>
+
+        <section className="flex flex-col gap-3 border-t border-border/70 pt-4 sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm font-semibold text-foreground">Who can see your setup?</p>
+            <p className="text-xs text-muted-foreground">
+              Choose to share it with everyone, keep it private, or share only with your teams.
+            </p>
+          </div>
+
+          <ToggleGroup onValueChange={(e) => setVisibility(e as "public" | "private" | "teams-only")} variant={"outline"} type="single" defaultValue="public">
+            <ToggleGroupItem value="public">Public</ToggleGroupItem>
+            <ToggleGroupItem value="private">Private</ToggleGroupItem>
+            <ToggleGroupItem value="teams-only">Teams-only</ToggleGroupItem>
+          </ToggleGroup>
 
         </section>
 
@@ -350,5 +371,5 @@ export function TelemetryMetadataPreview({
         </section>
       </CardContent>
     </Card>
-  );
+  </>
 }

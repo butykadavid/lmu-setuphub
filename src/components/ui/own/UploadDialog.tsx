@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { inspectDuckDbFile } from "@/lib/telemetry/parse-duckdb-browser";
 import { useAuth } from "@/context/AuthContext";
+import { useLoading } from "@/context/LoadingContext";
 import { authorizedJsonFetch } from "../../../lib/firebase/authenticated-fetch";
 
 import FileUploader from "@/components/ui/own/FileUploader";
@@ -31,6 +32,7 @@ type UploadDialogProps = {
 
 export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
   const { user } = useAuth();
+  const { startLoading, stopLoading } = useLoading();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<TelemetryParseResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -59,7 +61,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     const file = files[0];
     if (!file) return;
 
-    setLoading(true);
+    startLoading("file-parse", "default", "Parsing telemetry file...");
     setError(null);
     setResult(null);
     setUploadError(null);
@@ -73,11 +75,12 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       setError(err instanceof Error ? err.message : "Failed to parse file");
     } finally {
       setLoading(false);
+      stopLoading("file-parse");
     }
   }
 
   async function handleSubmitUpload(payload: TelemetryUploadPayload) {
-    setUploading(true);
+    startLoading("telemetry-upload", "upload", "Uploading telemetry data...");
     setUploadError(null);
     setUploadSuccess(null);
 
@@ -102,11 +105,13 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       }
 
       setUploadSuccess(body.message);
+      onOpenChange(false);
     } catch (err) {
       console.error(err);
       setUploadError(err instanceof Error ? err.message : "Failed to upload telemetry");
     } finally {
       setUploading(false);
+      stopLoading("telemetry-upload");
     }
   }
 

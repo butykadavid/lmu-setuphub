@@ -68,7 +68,7 @@ export function NavBar() {
                     <DropdownMenuContent className="w-40" align="start">
                       <DropdownMenuGroup>
                         <DropdownMenuLabel>Navigation</DropdownMenuLabel>
-                        <DropdownMenuItem disabled>
+                        <DropdownMenuItem onClick={() => router.push("/browse")}>
                           Browse
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push("/dashboard")}>

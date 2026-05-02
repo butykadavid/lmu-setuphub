@@ -27,6 +27,7 @@ export type TelemetryUploadPayload = TelemetryParseResult & {
   driverNote: string;
   carConfirmed: boolean;
   dataConfirmed: boolean;
+  visibility: "public" | "private" | "teams-only";
 };
 
 export type TelemetryUploadResponse = {

@@ -18,6 +18,10 @@ function getMetaValue(metadata: MetadataItem[], key: string) {
   return metadata.find((item) => item.key === key)?.value ?? null;
 }
 
+function sanitizeMetadata(metadata: MetadataItem[]) {
+  return metadata.filter((item) => item.key.toLowerCase() !== "steamid");
+}
+
 function isMetadataList(value: unknown): value is MetadataItem[] {
   return Array.isArray(value) && value.every((item) => {
     return typeof item === "object"
@@ -38,6 +42,10 @@ function isGroupedSetup(value: unknown): value is GroupedSetup {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+function isTelemetryVisibility(value: unknown): value is TelemetryUploadPayload["visibility"] {
+  return value === "public" || value === "private" || value === "teams-only";
+}
+
 function isTelemetryUploadPayload(value: unknown): value is TelemetryUploadPayload {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -50,6 +58,7 @@ function isTelemetryUploadPayload(value: unknown): value is TelemetryUploadPaylo
     && typeof payload.driverNote === "string"
     && typeof payload.carConfirmed === "boolean"
     && typeof payload.dataConfirmed === "boolean"
+    && isTelemetryVisibility(payload.visibility)
     && isMetadataList(payload.metadata)
     && isBestLapItem(payload.bestLap)
     && isGroupedSetup(payload.setup);
@@ -74,10 +83,12 @@ export async function POST(request: NextRequest) {
       driverNote,
       carConfirmed,
       dataConfirmed,
+      visibility,
       metadata,
       bestLap,
       setup,
     } = body;
+    const sanitizedMetadata = sanitizeMetadata(metadata);
 
     if (!selectedCarId.trim() || !selectedCarName.trim()) {
       return authErrorResponse("A confirmed car selection is required", 400);
@@ -87,7 +98,7 @@ export async function POST(request: NextRequest) {
       return authErrorResponse("Car and data confirmations are required", 400);
     }
 
-    if (metadata.length === 0) {
+    if (sanitizedMetadata.length === 0) {
       return authErrorResponse("Telemetry metadata is required", 400);
     }
 
@@ -102,19 +113,14 @@ export async function POST(request: NextRequest) {
         car: carConfirmed,
         data: dataConfirmed,
       },
-      summary: {
-        trackName: getMetaValue(metadata, "TrackName"),
-        trackLayout: getMetaValue(metadata, "TrackLayout"),
-        carClass: getMetaValue(metadata, "CarClass"),
-        carName: getMetaValue(metadata, "CarName"),
-        weatherConditions: getMetaValue(metadata, "WeatherConditions"),
-        sessionTime: getMetaValue(metadata, "SessionTime"),
-        sessionType: getMetaValue(metadata, "SessionType"),
-        version: getMetaValue(metadata, "Version"),
-      },
+      visibility,
+      version: getMetaValue(sanitizedMetadata, "Version") || -1,
       telemetry: {
-        metadata,
-        bestLap,
+        metadata: sanitizedMetadata,
+        lapData: {
+          bestLap: bestLap,
+          laps: [], // For now we only require best lap data, full lap data can be added in the future if needed
+        },
         setup,
       },
       createdAt: new Date(),
