@@ -20,12 +20,6 @@ export type TelemetrySummary = {
   visibility: "public" | "private" | "teams-only";
 };
 
-export type BrowseTelemetriesResponse = {
-  telemetries: TelemetrySummary[];
-  hasMore: boolean;
-  cursor?: string;
-};
-
 async function getTelemetrySummary(
   doc: FirebaseFirestore.DocumentSnapshot<FirebaseFirestore.DocumentData>
 ): Promise<TelemetrySummary> {
@@ -80,6 +74,7 @@ export async function GET(request: NextRequest) {
 
   try {
     const searchParams = request.nextUrl.searchParams;
+    const userId = auth.uid;
     const searchQuery = searchParams.get("q")?.toLowerCase() || "";
     const carFilter = searchParams.get("car")?.toLowerCase() || "";
     const trackFilter = searchParams.get("track")?.toLowerCase() || "";
@@ -113,7 +108,7 @@ export async function GET(request: NextRequest) {
     );
 
     summaries = summaries.filter(
-      (tel) => tel.visibility === "public" || tel.visibility === "teams-only"
+      (tel) => tel.userId === userId
     );
 
     if (searchQuery) {

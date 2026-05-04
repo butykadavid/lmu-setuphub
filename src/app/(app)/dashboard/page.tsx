@@ -1,6 +1,13 @@
 "use client";
 
+import { use, useCallback, useEffect, useRef, useState } from "react";
+
+import { TelemetrySummary } from "@/app/api/dashboard/telemetries/route";
+import { BrowseTelemetriesResponse } from "@/app/api/browse/telemetries/route";
+
 import { useAuth } from "@/context/AuthContext";
+
+import { useAuthenticatedFetch } from "@/lib/firebase/use-authenticated-fetch";
 
 import { Activity, Clock, Download, Gauge, Plus, Star, Upload } from "lucide-react";
 
@@ -9,13 +16,64 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { TelemetryCard } from "@/components/browse/TelemetryCard";
 
 export default function Dashboard() {
     const { user } = useAuth();
+    const authenticatedFetch = useAuthenticatedFetch();
+
+    const [telemetries, setTelemetries] = useState<TelemetrySummary[]>([]);
+    const isLoadingRef = useRef(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     if (!user) {
         return null;
     }
+
+    const fetchTelemetries = useCallback(
+        async () => {
+            if (isLoadingRef.current) return;
+
+            try {
+                isLoadingRef.current = true;
+                setError(null);
+
+                const response = await authenticatedFetch(
+                    `/api/dashboard/telemetries`
+                );
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(
+                        errorData.error || `HTTP ${response.status}: Failed to fetch telemetries`
+                    );
+                }
+
+                const data: BrowseTelemetriesResponse = await response.json();
+
+                setTelemetries((prev) =>
+                    [...prev, ...data.telemetries]
+                );
+            } catch (error) {
+                const errorMessage =
+                    error instanceof Error ? error.message : "Unknown error occurred";
+                console.error("Error fetching telemetries:", error);
+                setError(errorMessage);
+            } finally {
+                isLoadingRef.current = false;
+                setIsLoading(false);
+            }
+        },
+        [authenticatedFetch]
+    );
+
+    useEffect(() => {
+        if (!user) return;
+
+        setTelemetries([]);
+        fetchTelemetries();
+    }, [user]);
 
     return (
         <>
@@ -120,11 +178,18 @@ export default function Dashboard() {
                     </div>
 
                     <TabsContent value="uploaded">
-                        <EmptyContent
-                            title="No uploaded setups yet"
-                            text="Upload a native LMU .duckdb telemetry file and we’ll generate a verified setup page automatically."
-                            button="Upload telemetry"
-                        />
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {telemetries.map((telemetry) => (
+                                <TelemetryCard
+                                    key={telemetry.id}
+                                    telemetry={telemetry}
+                                    onClick={() => {
+                                        // TODO: Navigate to telemetry detail page
+                                        // router.push(`/browse/${telemetry.id}`);
+                                    }}
+                                />
+                            ))}
+                        </div>
                     </TabsContent>
 
                     <TabsContent value="saved">

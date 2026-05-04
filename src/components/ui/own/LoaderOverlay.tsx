@@ -8,7 +8,7 @@ import { CheckCheck, Loader2 } from "lucide-react";
 
 import { useLoading } from "@/context/LoadingContext";
 
-export function LoaderOverlay() {
+export function LoaderOverlay({message}: {message?: string}) {
     const { isLoading, events, completedEvent, clearCompletedEvent } = useLoading();
 
     useEffect(() => {

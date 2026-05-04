@@ -32,7 +32,7 @@ export function TelemetryCard({ telemetry, onClick }: TelemetryCardProps) {
   const lapTimeDisplay = bestLap ? convertSecondsToTime(bestLap.value) : "-";
 
   const trackName = extractMetadataValue(metaData, "TrackName") || "Unknown Track";
-  const carName = extractMetadataValue(metaData, "CarName") || "Unknown Car";
+  const carModel = telemetry.carModel || "Unknown Car Model";
   const driverName = extractMetadataValue(metaData, "DriverName") || null;
 
   const handleCardClick = () => {
@@ -48,7 +48,7 @@ export function TelemetryCard({ telemetry, onClick }: TelemetryCardProps) {
         <div className="flex items-start justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="font-semibold text-base text-foreground truncate">
-              {carName || "Unknown Car"}
+              {carModel || "Unknown Car"}
             </div>
             <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
               {telemetry.uploaderName && (

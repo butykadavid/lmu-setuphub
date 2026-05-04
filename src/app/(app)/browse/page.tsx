@@ -18,7 +18,6 @@ export default function Browse() {
   const { user } = useAuth();
   const authenticatedFetch = useAuthenticatedFetch();
 
-  // State management
   const [telemetries, setTelemetries] = useState<TelemetrySummary[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isInitialLoading, setIsInitialLoading] = useState(true);
@@ -26,12 +25,10 @@ export default function Browse() {
   const [cursor, setCursor] = useState<string | undefined>();
   const [error, setError] = useState<string | null>(null);
 
-  // Filters
   const [searchQuery, setSearchQuery] = useState("");
   const [carFilter, setCarFilter] = useState("");
   const [trackFilter, setTrackFilter] = useState("");
 
-  // For infinite scroll
   const observerTarget = useRef<HTMLDivElement>(null);
   const isLoadingRef = useRef(false);
 
@@ -85,7 +82,6 @@ export default function Browse() {
     [searchQuery, carFilter, trackFilter, authenticatedFetch]
   );
 
-  // Initial load and refetch when filters change
   useEffect(() => {
     setIsInitialLoading(true);
     setTelemetries([]);
@@ -93,7 +89,6 @@ export default function Browse() {
     fetchTelemetries(true);
   }, [searchQuery, carFilter, trackFilter]);
 
-  // Infinite scroll observer
   useEffect(() => {
     const observer = new IntersectionObserver(
       (entries) => {
@@ -241,14 +236,14 @@ export default function Browse() {
           {carFilter && (
             <PillBadge
               text={`Car: ${carFilter}`}
-              color="secondary"
+              color="primary"
               mode="default"
             />
           )}
           {trackFilter && (
             <PillBadge
               text={`Track: ${trackFilter}`}
-              color="secondary"
+              color="primary"
               mode="default"
             />
           )}
