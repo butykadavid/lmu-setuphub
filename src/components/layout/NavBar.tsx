@@ -58,7 +58,6 @@ export function NavBar() {
                         <Avatar>
                           <AvatarImage src={`${user.photoURL}`} alt={`${user.displayName || user.email}`} />
                           <AvatarFallback>{user.displayName?.charAt(0) || user.email?.charAt(0)}</AvatarFallback>
-                          {/*<AvatarBadge className="bg-green-600 dark:bg-green-800" /> */}
                         </Avatar>
                         <span className="text-sm text-muted-foreground hidden sm:inline">
                           {user.displayName || user.email}
@@ -110,7 +109,7 @@ export function NavBar() {
                   </DropdownMenu>
                 </>
               ) : (
-                <GoogleSignInButton />
+                <GoogleSignInButton text="Sign In" className="w-32"/>
               )}
             </div>
           </div>

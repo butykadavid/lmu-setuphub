@@ -16,8 +16,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
-  TelemetryMetadataPreview,
-} from "@/components/ui/own/TelemetryMetadataPreview";
+  TelemetryDataDisplayUploadWrapper
+} from "@/components/ui/own/TelemetryDataDisplayUploadWrapper";
 import type {
   TelemetryParseResult,
   TelemetryUploadPayload,
@@ -138,7 +138,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
 
         {result && (
           <div className="mt-2">
-            <TelemetryMetadataPreview
+            <TelemetryDataDisplayUploadWrapper
               metadata={result.metadata}
               bestLap={result.bestLap}
               setup={result.setup}
