@@ -1,319 +1,133 @@
 "use client";
 
-import { useEffect, useRef, useCallback, useState } from "react";
-import { useAuth } from "@/context/AuthContext";
-import { useAuthenticatedFetch } from "@/lib/firebase/use-authenticated-fetch";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import { PillBadge } from "@/components/ui/own/PillBadge";
-import { LoaderOverlay } from "@/components/ui/own/LoaderOverlay";
-import { TelemetryCard } from "@/components/browse/TelemetryCard";
-import type {
-  TelemetrySummary,
-  BrowseTelemetriesResponse,
-} from "@/app/api/browse/telemetries/route";
-import { Search, X } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Search, Gauge } from "lucide-react";
 
-export default function Browse() {
-  const { user } = useAuth();
+import { useAuthenticatedFetch } from "@/lib/firebase/use-authenticated-fetch";
+import { TelemetrySummary } from "@/lib/telemetry/types";
+
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { TelemetryCard } from "@/components/browse/TelemetryCard";
+
+export default function BrowseTelemetriesPage() {
   const authenticatedFetch = useAuthenticatedFetch();
 
-  const [telemetries, setTelemetries] = useState<TelemetrySummary[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isInitialLoading, setIsInitialLoading] = useState(true);
-  const [hasMore, setHasMore] = useState(true);
-  const [cursor, setCursor] = useState<string | undefined>();
+  const [data, setData] = useState<TelemetrySummary[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const [searchQuery, setSearchQuery] = useState("");
-  const [carFilter, setCarFilter] = useState("");
-  const [trackFilter, setTrackFilter] = useState("");
+  const [search, setSearch] = useState("");
 
-  const observerTarget = useRef<HTMLDivElement>(null);
-  const isLoadingRef = useRef(false);
-
-  const fetchTelemetries = useCallback(
-    async (resetPagination = false, cursorValue?: string) => {
-      if (isLoadingRef.current) return;
+  useEffect(() => {
+    async function loadTelemetries() {
+      setLoading(true);
+      setError(null);
 
       try {
-        isLoadingRef.current = true;
-        setError(null);
-
         const params = new URLSearchParams();
-        if (searchQuery) params.append("q", searchQuery);
-        if (carFilter) params.append("car", carFilter);
-        if (trackFilter) params.append("track", trackFilter);
-        params.append("limit", "12");
 
-        if (cursorValue && !resetPagination) {
-          params.append("cursor", cursorValue);
+        if (search.trim()) {
+          params.set("q", search.trim());
         }
 
-        const response = await authenticatedFetch(
-          `/api/browse/telemetries?${params.toString()}`
-        );
+        params.set("limit", "24");
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(
-            errorData.error || `HTTP ${response.status}: Failed to fetch telemetries`
-          );
+        const res = await authenticatedFetch(`/api/browse/telemetries?${params.toString()}`);
+
+        if (!res.ok) {
+          throw new Error("Failed to load telemetry uploads");
         }
 
-        const data: BrowseTelemetriesResponse = await response.json();
+        const json = await res.json();
 
-        setTelemetries((prev) =>
-          resetPagination ? data.telemetries : [...prev, ...data.telemetries]
-        );
-        setHasMore(data.hasMore);
-        setCursor(data.cursor);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Unknown error occurred";
-        console.error("Error fetching telemetries:", error);
-        setError(errorMessage);
+        setData(json.telemetries ?? []);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Unknown error");
       } finally {
-        isLoadingRef.current = false;
-        setIsLoading(false);
-        setIsInitialLoading(false);
+        setLoading(false);
       }
-    },
-    [searchQuery, carFilter, trackFilter, authenticatedFetch]
-  );
-
-  useEffect(() => {
-    setIsInitialLoading(true);
-    setTelemetries([]);
-    setCursor(undefined);
-    fetchTelemetries(true);
-  }, [searchQuery, carFilter, trackFilter]);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (
-          entries[0].isIntersecting &&
-          hasMore &&
-          !isLoading &&
-          !isInitialLoading &&
-          telemetries.length > 0
-        ) {
-          setIsLoading(true);
-          fetchTelemetries(false, cursor);
-        }
-      },
-      { threshold: 0.1 }
-    );
-
-    const currentTarget = observerTarget.current;
-    if (currentTarget) {
-      observer.observe(currentTarget);
     }
 
-    return () => {
-      if (currentTarget) {
-        observer.unobserve(currentTarget);
-      }
-    };
-  }, [hasMore, isLoading, isInitialLoading, cursor, fetchTelemetries, telemetries.length]);
+    const timeout = setTimeout(loadTelemetries, 250);
 
-  // Handle search/filter changes
-  const handleSearch = useCallback(
-    (value: string) => {
-      setSearchQuery(value);
-      setTelemetries([]);
-      setCursor(undefined);
-      setIsLoading(true);
-      setIsInitialLoading(true);
-    },
-    []
-  );
-
-  const handleFilterChange = useCallback(
-    (filterName: string, value: string) => {
-      if (filterName === "car") setCarFilter(value);
-      if (filterName === "track") setTrackFilter(value);
-
-      setTelemetries([]);
-      setCursor(undefined);
-      setIsLoading(true);
-      setIsInitialLoading(true);
-    },
-    []
-  );
-
-  const clearFilters = useCallback(() => {
-    setSearchQuery("");
-    setCarFilter("");
-    setTrackFilter("");
-    setTelemetries([]);
-    setCursor(undefined);
-    setError(null);
-    setIsLoading(true);
-    setIsInitialLoading(true);
-  }, []);
-
-  if (!user) return null;
-
-  const hasActiveFilters = searchQuery || carFilter || trackFilter;
-  const isEmptyState = !isInitialLoading && telemetries.length === 0;
+    return () => clearTimeout(timeout);
+  }, [search]);
 
   return (
-    <>
-      {/* Header */}
-      <section className="flex flex-col gap-2">
-        <PillBadge text="Browse Telemetries" color="primary" mode="default" />
+    <main className="min-h-screen bg-background p-6 md:p-10">
+      <div className="mx-auto flex max-w-7xl flex-col gap-8">
+        <section className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
+          <div>
+            <Badge variant="secondary" className="mb-3">
+              Community telemetry
+            </Badge>
 
-        <div>
-          <h1 className="text-4xl font-black tracking-tight text-foreground">
-            Discover community setups
-          </h1>
-          <p className="mt-2 text-muted-foreground">
-            Browse verified telemetry from sim racers around the world. Find the
-            perfect setup for your next session.
-          </p>
-        </div>
-      </section>
+            <h1 className="text-4xl font-black tracking-tight text-foreground">
+              Browse verified uploads
+            </h1>
 
-      {/* Search & Filters */}
-      <section className="flex flex-col gap-4 md:flex-row md:items-end md:gap-3">
-        {/* Search */}
-        <div className="flex-1 relative">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
-            <Input
-              type="text"
-              placeholder="Search car, track, driver..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="pl-10"
-            />
-          </div>
-        </div>
-
-        {/* Filters */}
-        <input
-          type="text"
-          placeholder="Car..."
-          value={carFilter}
-          onChange={(e) => handleFilterChange("car", e.target.value)}
-          className="h-9 px-3 py-2 border border-input rounded-md bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus-visible:ring-primary w-full md:w-32"
-        />
-
-        <input
-          type="text"
-          placeholder="Track..."
-          value={trackFilter}
-          onChange={(e) => handleFilterChange("track", e.target.value)}
-          className="h-9 px-3 py-2 border border-input rounded-md bg-background text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-1 focus:ring-ring focus-visible:ring-primary w-full md:w-32"
-        />
-
-        {/* Clear filters button */}
-        {hasActiveFilters && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={clearFilters}
-            className="gap-2 w-full md:w-auto"
-          >
-            <X className="h-4 w-4" />
-            Clear
-          </Button>
-        )}
-      </section>
-
-      {/* Active filters display */}
-      {hasActiveFilters && (
-        <div className="flex flex-wrap gap-2">
-          {searchQuery && (
-            <PillBadge
-              text={`Search: "${searchQuery}"`}
-              color="primary"
-              mode="default"
-            />
-          )}
-          {carFilter && (
-            <PillBadge
-              text={`Car: ${carFilter}`}
-              color="primary"
-              mode="default"
-            />
-          )}
-          {trackFilter && (
-            <PillBadge
-              text={`Track: ${trackFilter}`}
-              color="primary"
-              mode="default"
-            />
-          )}
-        </div>
-      )}
-
-      {/* Error message */}
-      {error && (
-        <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-4 text-sm text-destructive">
-          <p className="font-medium">Error loading telemetries</p>
-          <p className="mt-1 text-xs opacity-90">{error}</p>
-        </div>
-      )}
-
-      {/* Telemetries Grid */}
-      {isInitialLoading ? (
-        <LoaderOverlay message="Loading telemetries..." />
-      ) : error ? (
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
-          <div className="text-muted-foreground space-y-2">
-            <p className="text-lg font-medium">Failed to load telemetries</p>
-            <p className="text-sm">{error}</p>
-          </div>
-        </div>
-      ) : isEmptyState ? (
-        <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
-          <div className="text-muted-foreground space-y-2">
-            <p className="text-lg font-medium">No telemetries found</p>
-            <p className="text-sm">
-              {hasActiveFilters
-                ? "Try adjusting your filters or search query."
-                : "Be the first to upload a verified telemetry!"}
+            <p className="mt-2 max-w-2xl text-muted-foreground">
+              Explore uploaded LMU setup telemetry. Full channels are loaded
+              only when you open an upload.
             </p>
           </div>
-        </div>
-      ) : (
-        <>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {telemetries.map((telemetry) => (
-              <TelemetryCard
-                key={telemetry.id}
-                telemetry={telemetry}
-                onClick={() => {
-                  // TODO: Navigate to telemetry detail page
-                  // router.push(`/browse/${telemetry.id}`);
-                }}
-              />
+
+          <Button>Upload telemetry</Button>
+        </section>
+
+        <section className="relative max-w-xl">
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search car, track, class, driver note..."
+            className="pl-9"
+          />
+        </section>
+
+        {loading && (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <Card key={index} className="h-56 animate-pulse bg-muted/40" />
             ))}
           </div>
+        )}
 
-          {/* Intersection observer target for infinite scroll */}
-          {hasMore && (
-            <div
-              ref={observerTarget}
-              className="flex justify-center py-8 col-span-full"
-            >
-              {isLoading && <div className="text-muted-foreground text-sm">Loading more...</div>}
-            </div>
-          )}
+        {error && (
+          <Card className="border-destructive/40 bg-destructive/10">
+            <CardContent className="p-6 text-destructive">{error}</CardContent>
+          </Card>
+        )}
 
-          {/* End of results */}
-          {!hasMore && telemetries.length > 0 && (
-            <div className="flex justify-center py-8 col-span-full">
-              <p className="text-muted-foreground text-sm">
-                No more telemetries to load
+        {!loading && !error && data.length === 0 && (
+          <Card className="border-dashed">
+            <CardContent className="flex min-h-72 flex-col items-center justify-center p-8 text-center">
+              <Gauge className="mb-4 h-10 w-10 text-muted-foreground" />
+
+              <h2 className="text-2xl font-bold text-foreground">
+                No telemetry uploads found
+              </h2>
+
+              <p className="mt-2 max-w-md text-muted-foreground">
+                Try a different search, or upload the first telemetry file for
+                this car and track.
               </p>
-            </div>
-          )}
-        </>
-      )}
-    </>
+            </CardContent>
+          </Card>
+        )}
+
+        {!loading && !error && data.length > 0 && (
+          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {data.map((d) => (
+              <TelemetryCard key={d.id} data={d} />
+            ))}
+          </section>
+        )}
+      </div>
+    </main>
   );
 }

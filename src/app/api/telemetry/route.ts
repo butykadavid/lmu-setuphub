@@ -8,7 +8,7 @@ import {
 } from "@/lib/firebase/api-middleware";
 import { adminDb } from "@/lib/firebase/admin";
 import type {
-  BestLapItem,
+  LapTelemetry,
   GroupedSetup,
   MetadataItem,
   TelemetryUploadPayload,
@@ -31,11 +31,16 @@ function isMetadataList(value: unknown): value is MetadataItem[] {
   });
 }
 
-function isBestLapItem(value: unknown): value is BestLapItem {
+function isLapTelemetry(value: unknown): value is LapTelemetry {
   return typeof value === "object"
     && value !== null
-    && typeof (value as any).ts === "number"
-    && typeof (value as any).value === "number";
+    && typeof (value as any).lapStartTs === "number"
+    && typeof (value as any).lapEndTs === "number"
+    && typeof (value as any).lapTime === "number"
+    && Array.isArray((value as any).throttle)
+    && Array.isArray((value as any).brake)
+    && Array.isArray((value as any).speed)
+    && Array.isArray((value as any).gears);
 }
 
 function isGroupedSetup(value: unknown): value is GroupedSetup {
@@ -60,7 +65,7 @@ function isTelemetryUploadPayload(value: unknown): value is TelemetryUploadPaylo
     && typeof payload.dataConfirmed === "boolean"
     && isTelemetryVisibility(payload.visibility)
     && isMetadataList(payload.metadata)
-    && isBestLapItem(payload.bestLap)
+    && isLapTelemetry(payload.bestLapTelemetry)
     && isGroupedSetup(payload.setup);
 }
 
@@ -71,9 +76,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body: unknown = await request.json();
+    let body: unknown;
+    try {
+      body = await request.json();
+    } catch (err) {
+      const parseError = err instanceof Error ? err.message : "Unknown parse error";
+      console.error("JSON parse error:", parseError);
+      return authErrorResponse(`Invalid JSON: ${parseError}`, 400);
+    }
 
     if (!isTelemetryUploadPayload(body)) {
+      console.warn("Invalid payload structure received");
       return authErrorResponse("Invalid telemetry upload payload", 400);
     }
 
@@ -85,7 +98,7 @@ export async function POST(request: NextRequest) {
       dataConfirmed,
       visibility,
       metadata,
-      bestLap,
+      bestLapTelemetry,
       setup,
     } = body;
     const sanitizedMetadata = sanitizeMetadata(metadata);
@@ -102,7 +115,34 @@ export async function POST(request: NextRequest) {
       return authErrorResponse("Telemetry metadata is required", 400);
     }
 
-    const telemetryDoc = {
+    // const telemetryDoc = {
+    //   userId: auth.uid,
+    //   selectedCar: {
+    //     id: selectedCarId.trim(),
+    //     name: selectedCarName.trim(),
+    //   },
+    //   driverNote: driverNote.trim(),
+    //   confirmations: {
+    //     car: carConfirmed,
+    //     data: dataConfirmed,
+    //   },
+    //   visibility,
+    //   version: getMetaValue(sanitizedMetadata, "Version") || -1,
+    //   telemetry: {
+    //     metadata: sanitizedMetadata,
+    //     lapData: {
+    //       bestLapTelemetry: bestLapTelemetry,
+    //       laps: [], // For now we only require best lap data, full lap data can be added in the future if needed
+    //     },
+    //     setup,
+    //   },
+    //   createdAt: new Date(),
+    //   updatedAt: new Date(),
+    // };
+
+    // const docRef = await adminDb.collection("telemetryUploads").add(telemetryDoc);
+
+    const uploadDoc = {
       userId: auth.uid,
       selectedCar: {
         id: selectedCarId.trim(),
@@ -117,24 +157,111 @@ export async function POST(request: NextRequest) {
       version: getMetaValue(sanitizedMetadata, "Version") || -1,
       telemetry: {
         metadata: sanitizedMetadata,
-        lapData: {
-          bestLap: bestLap,
-          laps: [], // For now we only require best lap data, full lap data can be added in the future if needed
+        bestLap: {
+          lapTime: bestLapTelemetry.lapTime,
         },
         setup,
       },
       createdAt: new Date(),
       updatedAt: new Date(),
+      status: "incomplete" // This can be updated to "complete" once all related data is successfully written
     };
 
-    const docRef = await adminDb.collection("telemetryUploads").add(telemetryDoc);
+    const docRef = await adminDb
+      .collection("telemetryUploads")
+      .add(uploadDoc);
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("throttle")
+      .set({
+        values: bestLapTelemetry.throttle.map((point) => (
+          {
+            lapTime: point.lapTime.toFixed(4),
+            value: point.value.toFixed(3)
+          }
+        )),
+      });
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("brake")
+      .set({
+        values: bestLapTelemetry.brake.map((point) => (
+          {
+            lapTime: point.lapTime.toFixed(4),
+            value: point.value.toFixed(3)
+          }
+        )),
+      });
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("lapDist")
+      .set({
+        values: bestLapTelemetry.lapDist.map((point) => ({
+          lapTime: point.lapTime.toFixed(4),
+          value: point.value.toFixed(3)
+        })),
+      });
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("speed")
+      .set({
+        values: bestLapTelemetry.speed.map((point) => ({
+          lapTime: point.lapTime.toFixed(4),
+          value: point.value.toFixed(3)
+        })),
+      });
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("gears")
+      .set({
+        values: bestLapTelemetry.gears,
+      });
+
+    await adminDb
+      .collection("telemetryUploads")
+      .doc(docRef.id)
+      .collection("channels")
+      .doc("gpsCoords")
+      .set({
+        values: bestLapTelemetry.gpsCoords,
+      });
+
+    await docRef.update({ status: "complete" });
 
     return authSuccessResponse({
       message: "Telemetry uploaded successfully",
       telemetryId: docRef.id,
     }, 201);
   } catch (error) {
-    console.error("Error uploading telemetry:", error);
-    return authErrorResponse("Failed to upload telemetry", 500);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorStack = error instanceof Error ? error.stack : "";
+
+    console.error("Telemetry Upload Error:", {
+      message: errorMessage,
+      stack: errorStack,
+      timestamp: new Date().toISOString(),
+      type: error instanceof Error ? error.constructor.name : typeof error,
+    });
+
+    // Return a more detailed error message for debugging
+    return authErrorResponse(
+      `Telemetry upload failed: ${errorMessage}`,
+      500
+    );
   }
 }

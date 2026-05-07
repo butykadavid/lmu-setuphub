@@ -1,14 +1,11 @@
 "use client";
 
-import { useMemo } from "react";
-
 import { Car, Cloud, Clock, Flag, MapPinned, Route, Wrench, Timer } from "lucide-react";
 
 import { convertSecondsToTime, extractMetadataValue } from "@/lib/functions";
 import type {
-  BestLapItem,
-  GroupedSetup,
   MetadataItem,
+  TelemetryParseResult,
 } from "@/lib/telemetry/types";
 import {
   mapSetupToScreenTabs,
@@ -19,33 +16,32 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
-
-type TelemetryDataDisplayProps = {
-  metadata: MetadataItem[];
-  bestLap: BestLapItem;
-  setup: GroupedSetup;
-};
+import TelemetryPointRangeVisualizer from "./TelemetryPointRangeVisualizer";
 
 function getMeta(metadata: MetadataItem[], key: string) {
   return extractMetadataValue(metadata, key) ?? "Unknown";
 }
 
-export function TelemetryDataDisplay({
-  metadata,
-  bestLap,
-  setup,
-}: TelemetryDataDisplayProps) {
-  const trackName = getMeta(metadata, "TrackName");
-  const trackLayout = getMeta(metadata, "TrackLayout");
-  const carClass = getMeta(metadata, "CarClass");
-  const carName = getMeta(metadata, "CarName");
-  const weather = getMeta(metadata, "WeatherConditions");
-  const sessionTime = getMeta(metadata, "SessionTime");
-  const sessionType = getMeta(metadata, "SessionType");
-  const version = getMeta(metadata, "Version");
-  const bestLapTime = convertSecondsToTime(bestLap.value);
+export function TelemetryDataDisplay({ data }: { data: TelemetryParseResult }) {
+  const trackName = getMeta(data.metadata, "TrackName");
+  const trackLayout = getMeta(data.metadata, "TrackLayout");
+  const carClass = getMeta(data.metadata, "CarClass");
+  const carName = getMeta(data.metadata, "CarName");
+  const weather = getMeta(data.metadata, "WeatherConditions");
+  const sessionTime = getMeta(data.metadata, "SessionTime");
+  const sessionType = getMeta(data.metadata, "SessionType");
+  const version = getMeta(data.metadata, "Version");
 
-  const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(setup, carClass);
+  const { lapStartTs, lapEndTs, lapTime, throttle, brake, speed, gpsCoords, gears } = data.bestLapTelemetry;
+
+  const bestLapTimeSeconds = convertSecondsToTime(data.bestLapTelemetry.lapTime);
+  const throttleInputs = throttle;
+  const brakeInputs = brake;
+  const speedInputs = speed;
+  const gpsCoordsInputs = gpsCoords;
+  const gearInputs = gears;
+
+  const setupTabs: SetupScreenTab[] = mapSetupToScreenTabs(data.setup, carClass);
 
   const totalSetupValues = setupTabs.reduce(
     (total, tab) => total + tab.sections.reduce((sectionTotal, section) => sectionTotal + section.items.length, 0),
@@ -81,7 +77,7 @@ export function TelemetryDataDisplay({
           <InfoTile icon={<Cloud />} label="Weather" value={weather} />
           <InfoTile icon={<Clock />} label="Session time" value={sessionTime} />
           <InfoTile icon={<Flag />} label="Session type" value={sessionType} />
-          <InfoTile icon={<Timer />} label="Best lap time" value={bestLapTime} />
+          <InfoTile icon={<Timer />} label="Best lap time" value={bestLapTimeSeconds} />
         </div>
 
         {setupTabs.length > 0 && (
@@ -136,9 +132,8 @@ export function TelemetryDataDisplay({
                           {section.items.map((item) => (
                             <div
                               key={item.key}
-                              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 ${
-                                item.isDisabled ? "bg-muted/40 opacity-45" : "bg-background/70"
-                              }`}
+                              className={`flex items-start justify-between gap-3 rounded-md px-2 py-1.5 ${item.isDisabled ? "bg-muted/40 opacity-45" : "bg-background/70"
+                                }`}
                             >
                               <span className="min-w-0 text-xs text-muted-foreground">
                                 {item.label}
@@ -157,6 +152,10 @@ export function TelemetryDataDisplay({
             </Tabs>
           </section>
         )}
+
+        <TelemetryPointRangeVisualizer points={throttleInputs} color="#00FF00" />
+        <TelemetryPointRangeVisualizer points={brakeInputs} color="#FF0000" />
+        <TelemetryPointRangeVisualizer points={speedInputs} color="#0000FF" />
       </CardContent>
     </Card>
   );

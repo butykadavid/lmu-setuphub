@@ -83,6 +83,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
     startLoading("telemetry-upload", "upload", "Uploading telemetry data...");
     setUploadError(null);
     setUploadSuccess(null);
+    setUploading(true);
 
     try {
       if (!user) {
@@ -97,18 +98,25 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
       const body = await response.json() as TelemetryUploadResponse | { error?: string };
 
       if (!response.ok) {
-        throw new Error("error" in body && body.error ? body.error : "Failed to upload telemetry");
+        const errorMsg = ("error" in body && body.error) ? body.error : "Failed to upload telemetry";
+        console.error("Upload failed with status", response.status, ":", errorMsg);
+        throw new Error(errorMsg);
       }
 
       if (!("message" in body)) {
-        throw new Error("Unexpected upload response");
+        throw new Error("Unexpected upload response structure");
       }
 
       setUploadSuccess(body.message);
       onOpenChange(false);
     } catch (err) {
-      console.error(err);
-      setUploadError(err instanceof Error ? err.message : "Failed to upload telemetry");
+      const errorMsg = err instanceof Error ? err.message : "An unknown error occurred during upload";
+      console.error("Telemetry upload error:", {
+        error: err,
+        message: errorMsg,
+        timestamp: new Date().toISOString(),
+      });
+      setUploadError(errorMsg);
     } finally {
       setUploading(false);
       stopLoading("telemetry-upload");
@@ -139,9 +147,7 @@ export function UploadDialog({ open, onOpenChange }: UploadDialogProps) {
         {result && (
           <div className="mt-2">
             <TelemetryDataDisplayUploadWrapper
-              metadata={result.metadata}
-              bestLap={result.bestLap}
-              setup={result.setup}
+              data={result}
               isUploading={uploading}
               onSubmitUpload={handleSubmitUpload}
             />

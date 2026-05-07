@@ -1,10 +1,13 @@
-function convertSecondsToTime(seconds: number): string {
+function convertSecondsToTime(seconds: number | undefined): string {
+    if (!seconds) return "-"
+  
     const minutes = Math.floor(seconds / 60);
     const remainingSeconds = (seconds % 60).toFixed(3).padStart(6, "0");
     return `${minutes}:${remainingSeconds}`;
 }
 
-function formatTimeAgo(date: Date): string {
+function formatTimeAgo(_date: string): string {
+  const date = new Date(_date)
   const now = new Date();
   const seconds = Math.floor((now.getTime() - date.getTime()) / 1000);
 

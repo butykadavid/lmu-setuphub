@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { Wrench } from "lucide-react";
 
 import { findMatchingCarId, getCarsForClass, type TelemetryCarRosterEntry } from "@/lib/telemetry/carDictionary";
-import type { BestLapItem, GroupedSetup, MetadataItem, TelemetryUploadPayload } from "@/lib/telemetry/types";
+import type { GroupedSetup, LapTelemetry, MetadataItem, TelemetryUploadPayload } from "@/lib/telemetry/types";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,7 +26,7 @@ import InfoTile from "@/components/ui/own/InfoTile";
 
 type TelemetryDataUploadFormProps = {
   metadata: MetadataItem[];
-  bestLap: BestLapItem;
+  bestLapTelemetry: LapTelemetry;
   setup: GroupedSetup;
   isUploading: boolean;
   onSubmitUpload: (payload: TelemetryUploadPayload) => Promise<void>;
@@ -38,7 +38,7 @@ function getMeta(metadata: MetadataItem[], key: string) {
 
 export function TelemetryDataUploadForm({
   metadata,
-  bestLap,
+  bestLapTelemetry,
   setup,
   isUploading,
   onSubmitUpload,
@@ -83,8 +83,8 @@ export function TelemetryDataUploadForm({
 
     await onSubmitUpload({
       metadata,
-      bestLap,
       setup,
+      bestLapTelemetry,
       selectedCarId: selectedCar.id,
       selectedCarName: selectedCar.name,
       driverNote,

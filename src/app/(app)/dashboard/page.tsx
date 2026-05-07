@@ -1,12 +1,10 @@
 "use client";
 
-import { use, useCallback, useEffect, useRef, useState } from "react";
-
-import { TelemetrySummary } from "@/app/api/dashboard/telemetries/route";
-import { BrowseTelemetriesResponse } from "@/app/api/browse/telemetries/route";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { useAuth } from "@/context/AuthContext";
 
+import { TelemetrySummary } from "@/lib/telemetry/types";
 import { useAuthenticatedFetch } from "@/lib/firebase/use-authenticated-fetch";
 
 import { Activity, Clock, Download, Gauge, Plus, Star, Upload } from "lucide-react";
@@ -22,9 +20,9 @@ export default function Dashboard() {
     const { user } = useAuth();
     const authenticatedFetch = useAuthenticatedFetch();
 
-    const [telemetries, setTelemetries] = useState<TelemetrySummary[]>([]);
+    const [data, setData] = useState<TelemetrySummary[]>([]);
     const isLoadingRef = useRef(false);
-    const [isLoading, setIsLoading] = useState(false);
+    const [loading, setLoading] = useState(false)
     const [error, setError] = useState<string | null>(null);
 
     if (!user) {
@@ -33,36 +31,23 @@ export default function Dashboard() {
 
     const fetchTelemetries = useCallback(
         async () => {
-            if (isLoadingRef.current) return;
+            setLoading(true);
+            setError(null);
 
             try {
-                isLoadingRef.current = true;
-                setError(null);
+                const res = await authenticatedFetch(`/api/dashboard/telemetries`);
 
-                const response = await authenticatedFetch(
-                    `/api/dashboard/telemetries`
-                );
-
-                if (!response.ok) {
-                    const errorData = await response.json();
-                    throw new Error(
-                        errorData.error || `HTTP ${response.status}: Failed to fetch telemetries`
-                    );
+                if (!res.ok) {
+                    throw new Error("Failed to load telemetry uploads");
                 }
 
-                const data: BrowseTelemetriesResponse = await response.json();
+                const json = await res.json();
 
-                setTelemetries((prev) =>
-                    [...prev, ...data.telemetries]
-                );
-            } catch (error) {
-                const errorMessage =
-                    error instanceof Error ? error.message : "Unknown error occurred";
-                console.error("Error fetching telemetries:", error);
-                setError(errorMessage);
+                setData(json.telemetries ?? []);
+            } catch (err) {
+                setError(err instanceof Error ? err.message : "Unknown error");
             } finally {
-                isLoadingRef.current = false;
-                setIsLoading(false);
+                setLoading(false);
             }
         },
         [authenticatedFetch]
@@ -71,7 +56,7 @@ export default function Dashboard() {
     useEffect(() => {
         if (!user) return;
 
-        setTelemetries([]);
+        setData([]);
         fetchTelemetries();
     }, [user]);
 
@@ -179,14 +164,10 @@ export default function Dashboard() {
 
                     <TabsContent value="uploaded">
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                            {telemetries.map((telemetry) => (
+                            {data.map((d) => (
                                 <TelemetryCard
-                                    key={telemetry.id}
-                                    telemetry={telemetry}
-                                    onClick={() => {
-                                        // TODO: Navigate to telemetry detail page
-                                        // router.push(`/browse/${telemetry.id}`);
-                                    }}
+                                    key={d.id}
+                                    data={d}
                                 />
                             ))}
                         </div>

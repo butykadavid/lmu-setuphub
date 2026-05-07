@@ -1,116 +1,88 @@
 "use client";
 
-import { Card, CardContent } from "@/components/ui/card";
+import type { TelemetrySummary } from "@/lib/telemetry/types";
+import { convertSecondsToTime, formatTimeAgo } from "@/lib/functions";
+import { MapPinned, Car, Clock } from "lucide-react";
 import { PillBadge } from "@/components/ui/own/PillBadge";
-import type { TelemetrySummary } from "@/app/api/browse/telemetries/route";
-import { Map } from "lucide-react";
-import { convertSecondsToTime, formatTimeAgo, extractMetadataValue } from "@/lib/functions";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { useState } from "react";
-import { TelemetryDataDisplay } from "../ui/own/TelemetryDataDisplay";
+import { Card, CardContent } from "@/components/ui/card";
 
-interface TelemetryCardProps {
-  telemetry: TelemetrySummary;
-  onClick?: () => void;
-}
 
-export function TelemetryCard({ telemetry, onClick }: TelemetryCardProps) {
-  const [open, setOpen] = useState(false);
+export function TelemetryCard({ data }: { data: TelemetrySummary }) {
+  return (
+    <Card className="group overflow-hidden transition hover:border-primary/40 hover:bg-card/80">
+      <CardContent className="flex h-full flex-col gap-5 p-6">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <PillBadge mode="default" text={data.carClass || "Unknown"}/>
 
-  const createdDate = new Date(telemetry.createdAt);
-  const timeAgo = formatTimeAgo(createdDate);
-
-  const metaData = telemetry.telemetry.metadata;
-  const setup = telemetry.telemetry.setup;
-  const bestLap = telemetry.telemetry.lapData.bestLap;
-  const lapTimeDisplay = bestLap ? convertSecondsToTime(bestLap.value) : "-";
-
-  const trackName = extractMetadataValue(metaData, "TrackName") || "Unknown Track";
-  const carModel = telemetry.carModel || "Unknown Car Model";
-  const driverName = extractMetadataValue(metaData, "DriverName") || null;
-
-  const handleCardClick = () => {
-    setOpen(true);
-  }
-
-  return <>
-    <Card
-      className="group/card hover:ring-primary/30 cursor-pointer transition-all duration-200 hover:shadow-lg"
-      onClick={handleCardClick}
-    >
-      <CardContent className="pt-4 px-4 pb-4 flex flex-col gap-3">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold text-base text-foreground truncate">
-              {carModel || "Unknown Car"}
-            </div>
-            <div className="text-xs text-muted-foreground mt-1 space-y-0.5">
-              {telemetry.uploaderName && (
-                <div>
-                  Uploaded by <span className="font-medium text-foreground">{telemetry.uploaderName}</span>
-                </div>
-              )}
-              {driverName && (
-                <div>
-                  Driven by {driverName}
-                </div>
-              )}
-            </div>
+            <h2 className="mt-3 line-clamp-2 text-xl font-bold leading-tight text-foreground">
+              {data.carModel || "Unknown car"}
+            </h2>
           </div>
-          <div className="text-right">
-            <div className="text-xs font-mono text-primary font-semibold">
-              {lapTimeDisplay}
+
+          <div className="rounded-xl bg-primary/10 px-3 py-2 text-right">
+            <div className="text-xs text-primary">Best lap</div>
+            <div className="font-black text-foreground">
+              {convertSecondsToTime(data.telemetry.bestLap?.lapTime)}
             </div>
-            <div className="text-xs text-muted-foreground mt-1">{timeAgo}</div>
           </div>
         </div>
 
-        {trackName && (
-          <div className="flex items-center gap-2 text-sm">
-            <Map className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <span className="text-muted-foreground truncate">
-              {trackName}
-            </span>
-          </div>
-        )}
+        <div className="grid gap-3 text-sm">
+          <InfoRow
+            icon={<MapPinned />}
+            label="Track"
+            value={data.trackLayout || data.trackName || "Unknown"}
+          />
 
-        {telemetry.driverNote && (
-          <p className="text-sm text-muted-foreground line-clamp-2 italic">
-            "{telemetry.driverNote}"
+          <InfoRow
+            icon={<Car />}
+            label="Entry"
+            value={data.carModel || "Unknown"}
+          />
+
+          <InfoRow
+            icon={<Clock />}
+            label="Uploaded"
+            value={formatTimeAgo(data.createdAt)}
+          />
+        </div>
+
+        {data.driverNote && (
+          <p className="line-clamp-2 rounded-xl bg-muted/50 p-3 text-sm text-muted-foreground">
+            {data.driverNote}
           </p>
         )}
 
-        <div className="flex flex-wrap gap-2 pt-2">
-          {telemetry.visibility === "private" && (
-            <PillBadge text="Private" color="neutral" mode="default" />
-          )}
-          {telemetry.visibility === "teams-only" && (
-            <PillBadge text="Teams" color="primary" mode="default" />
-          )}
-          <PillBadge text="Verified" color="lime" mode="default" />
+        <div className="mt-auto flex items-center justify-between border-t border-border pt-4">
+          <span className="text-xs text-muted-foreground">
+            by {data.uploaderName ?? "Unknown driver"}
+          </span>
         </div>
       </CardContent>
     </Card>
+  );
+}
 
-    <Dialog open={open} onOpenChange={setOpen}>
-      <DialogContent className="min-w-6xl max-h-[90vh] overflow-auto">
-        <DialogHeader>
-          <DialogTitle>Upload file</DialogTitle>
-          <DialogDescription>
-            Grab your generated telemetry file and drop it here!
-          </DialogDescription>
-        </DialogHeader>
-        <div className="mt-2">
-          <TelemetryDataDisplay metadata={metaData} bestLap={bestLap} setup={setup} />
-        </div>
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <span className="flex h-8 w-8 items-center justify-center rounded-lg bg-muted text-muted-foreground [&>svg]:h-4 [&>svg]:w-4">
+        {icon}
+      </span>
 
-      </DialogContent>
-    </Dialog>
-  </>
+      <div className="min-w-0">
+        <div className="text-xs text-muted-foreground">{label}</div>
+        <div className="truncate font-medium text-foreground">{value}</div>
+      </div>
+    </div>
+  );
 }

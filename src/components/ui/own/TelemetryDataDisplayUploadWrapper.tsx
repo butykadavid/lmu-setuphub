@@ -1,9 +1,7 @@
 "use client";
 
 import type {
-  BestLapItem,
-  GroupedSetup,
-  MetadataItem,
+  TelemetryParseResult,
   TelemetryUploadPayload,
 } from "@/lib/telemetry/types";
 
@@ -11,27 +9,23 @@ import { TelemetryDataDisplay } from "@/components/ui/own/TelemetryDataDisplay";
 import { TelemetryDataUploadForm } from "@/components/ui/own/TelemetryDataUploadForm";
 
 type TelemetryDataDisplayUploadWrapperProps = {
-  metadata: MetadataItem[];
-  bestLap: BestLapItem;
-  setup: GroupedSetup;
+  data: TelemetryParseResult;
   isUploading: boolean;
   onSubmitUpload: (payload: TelemetryUploadPayload) => Promise<void>;
 };
 
 export function TelemetryDataDisplayUploadWrapper({
-  metadata,
-  bestLap,
-  setup,
+  data,
   isUploading,
   onSubmitUpload,
 }: TelemetryDataDisplayUploadWrapperProps) {
   return (
     <div className="space-y-4">
-      <TelemetryDataDisplay metadata={metadata} bestLap={bestLap} setup={setup} />
+      <TelemetryDataDisplay data={data} />
       <TelemetryDataUploadForm
-        metadata={metadata}
-        bestLap={bestLap}
-        setup={setup}
+        metadata={data.metadata}
+        bestLapTelemetry={data.bestLapTelemetry}
+        setup={data.setup}
         isUploading={isUploading}
         onSubmitUpload={onSubmitUpload}
       />
