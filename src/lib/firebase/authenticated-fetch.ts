@@ -14,7 +14,7 @@ export async function authorizedJsonFetch(
   input: RequestInfo | URL,
   init: AuthorizedJsonFetchInit = {}
 ) {
-  const token = await user.getIdToken(init.forceRefresh ?? true);
+  const token = await user.getIdToken(init.forceRefresh ?? false);
   const headers = new Headers(init.headers);
 
   headers.set("Authorization", `Bearer ${token}`);
