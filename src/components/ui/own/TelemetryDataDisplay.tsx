@@ -16,7 +16,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PillBadge } from "@/components/ui/own/PillBadge";
 import InfoTile from "@/components/ui/own/InfoTile";
-import TelemetryPointRangeVisualizer from "./TelemetryPointRangeVisualizer";
+import TelemetryPointRangeVisualizer from "@/components/ui/own/TelemetryPointRangeVisualizer";
+import TrackMapTelemetryComponent from "@/components/ui/own/TrackMapTelemetryComponent";
 
 function getMeta(metadata: MetadataItem[], key: string) {
   return extractMetadataValue(metadata, key) ?? "Unknown";
@@ -156,6 +157,8 @@ export function TelemetryDataDisplay({ data }: { data: TelemetryParseResult }) {
         <TelemetryPointRangeVisualizer points={throttleInputs} color="#00FF00" />
         <TelemetryPointRangeVisualizer points={brakeInputs} color="#FF0000" />
         <TelemetryPointRangeVisualizer points={speedInputs} color="#0000FF" />
+
+        <TrackMapTelemetryComponent gpsCoordInputs={gpsCoordsInputs}/>
       </CardContent>
     </Card>
   );

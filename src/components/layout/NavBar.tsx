@@ -76,6 +76,9 @@ export function NavBar() {
                         <DropdownMenuItem disabled>
                           Teams
                         </DropdownMenuItem>
+                        <DropdownMenuItem disabled>
+                          Compare
+                        </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />
                       <DropdownMenuGroup>
@@ -85,6 +88,13 @@ export function NavBar() {
                         </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setUpdateDialogOpen(true)}>
                           Upload
+                        </DropdownMenuItem>
+                      </DropdownMenuGroup>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuGroup>
+                        <DropdownMenuLabel>Guides</DropdownMenuLabel>
+                        <DropdownMenuItem disabled>
+                          Setup guide
                         </DropdownMenuItem>
                       </DropdownMenuGroup>
                       <DropdownMenuSeparator />

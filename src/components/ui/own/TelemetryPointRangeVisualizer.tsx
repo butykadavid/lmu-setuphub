@@ -14,8 +14,6 @@ export default function TelemetryPointRangeVisualizer({
         );
     }
 
-    console.log(points)
-
     const width = 1000;
     const height = 128;
 

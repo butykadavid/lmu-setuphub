@@ -1,14 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ArrowLeft, AlertTriangle } from "lucide-react";
-import Link from "next/link";
+import { AlertTriangle } from "lucide-react";
 import { useParams } from "next/navigation";
 
 import { useAuthenticatedFetch } from "@/lib/firebase/use-authenticated-fetch";
 import { TelemetryDataDisplay } from "@/components/ui/own/TelemetryDataDisplay";
 
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
 import type { TelemetryParseResult } from "@/lib/telemetry/types";

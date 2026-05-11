@@ -129,8 +129,10 @@ export async function GET(
       return values.map((item: any, index: number) => ({
         lapTime: item.lapTime ?? item.laptime ?? index / (data.sampleRate ?? 50),
         sessionTime: item.sessionTime ?? item.sessiontime ?? item.lapTime ?? item.laptime ?? index / (data.sampleRate ?? 50),
-        latitude: item.value?.latitude ?? item.latitude,
-        longitude: item.value?.longitude ?? item.longitude,
+        value: {
+          latitude: item.value?.latitude ?? item.latitude,
+          longitude: item.value?.longitude ?? item.longitude,
+        }
       }));
     }
 
