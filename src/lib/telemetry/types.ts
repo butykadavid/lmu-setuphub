@@ -67,7 +67,7 @@ export type LapTelemetry = {
 
 export type GPSDataPoint = {
   lapTime: number;
-  value: { longitude: number, latitude: number };
+  value: { longitude: number, latitude: number, trackEdge?: number, pathLateral?: number };
 }
 
 export type TelemetrySummary = {

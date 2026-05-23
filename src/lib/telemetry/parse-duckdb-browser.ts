@@ -101,6 +101,8 @@ export async function inspectDuckDbFile(file: File): Promise<TelemetryParseResul
     const lapDistFrequency = channelRows.find((row) => row.channelName === "Lap Dist")?.frequency || null;
     const speedFrequency = channelRows.find((row) => row.channelName === "Ground Speed")?.frequency || null;
     const gpsCoordsFrequency = channelRows.find((row) => row.channelName === "GPS Latitude")?.frequency || null;
+    const pathLateralFrequency = channelRows.find((row) => row.channelName === "Path Lateral")?.frequency || null;
+    const trackEdgeFrequency = channelRows.find((row) => row.channelName === "Track Edge")?.frequency || null;
 
     const bestLapsArray = rawQueryResultToArray<LapItem>(bestLapsData);
     const bestLap = bestLapsArray[0] ?? { ts: 0, value: 0 };
@@ -160,14 +162,37 @@ export async function inspectDuckDbFile(file: File): Promise<TelemetryParseResul
         lapEndTs,
     });
 
+    const pathLateral = await getChannelSlice({
+        conn,
+        channel: "Path Lateral",
+        frequencyHz: pathLateralFrequency || 10,
+        lapStartTs,
+        lapEndTs,
+    });
+
+    const trackEdge = await getChannelSlice({
+        conn,
+        channel: "Track Edge",
+        frequencyHz: trackEdgeFrequency || 10,
+        lapStartTs,
+        lapEndTs,
+    });
+
     const gpsCoords: GPSDataPoint[] = [];
 
     for (let i = 0; i < Math.min(gpsLat.length, gpsLon.length); i++) {
         gpsCoords.push({
             lapTime: gpsLat[i].lapTime,
-            value: { latitude: gpsLat[i].value, longitude: gpsLon[i].value }
+            value: {
+                latitude: gpsLat[i].value,
+                longitude: gpsLon[i].value,
+                trackEdge: trackEdge[i]?.value,
+                pathLateral: pathLateral[i]?.value
+            }
         });
     }
+
+    console.log("GPS Coords:", gpsCoords);
 
     const gears = await conn.query(`
         SELECT ts, value

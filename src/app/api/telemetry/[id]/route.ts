@@ -132,6 +132,8 @@ export async function GET(
         value: {
           latitude: item.value?.latitude ?? item.latitude,
           longitude: item.value?.longitude ?? item.longitude,
+          trackEdge: item.value?.trackEdge ?? item.trackEdge,
+          pathLateral: item.value?.pathLateral ?? item.pathLateral,
         }
       }));
     }
